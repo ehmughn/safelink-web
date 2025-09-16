@@ -1,0 +1,280 @@
+:root {
+  --primary: #ff5a1f;
+  --secondary: #ffb347;
+  --background: #f9fafb;
+  --card-bg: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #4b5563;
+  --accent: #d1d5db;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/Inter.ttf") format("truetype");
+}
+
+.create-root {
+  font-family: "Roboto", "Inter", system-ui, sans-serif;
+  background: linear-gradient(135deg, var(--background) 0%, #fff7ef 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2rem 1rem;
+}
+
+.create-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.create-tagline {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  font-weight: 400;
+  text-align: center;
+}
+
+.create-div {
+  background: var(--card-bg);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow);
+  padding: 2.5rem;
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.create-back-btn {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.create-back-btn:hover {
+  color: var(--text-primary);
+}
+
+.create-title {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  font-size: 1.75rem;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.create-desc {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.create-form {
+  width: 100%;
+}
+
+.create-input-div {
+  margin-bottom: 1.5rem;
+}
+
+.create-input-div label {
+  display: block;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.create-input-div input {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--accent);
+  background: #f9fafb;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.create-input-div input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.1);
+}
+
+.create-error {
+  width: 100%;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.create-error-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.create-btn {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow);
+}
+
+.create-btn:hover {
+  background: linear-gradient(90deg, var(--secondary) 0%, var(--primary) 100%);
+  transform: translateY(-2px);
+}
+
+.create-divider {
+  width: 100%;
+  text-align: center;
+  border-bottom: 1px solid var(--accent);
+  line-height: 0.1em;
+  margin: 1.5rem 0;
+}
+
+.create-divider span {
+  background: var(--card-bg);
+  padding: 0 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.create-google-btn {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: #f9fafb;
+  border: 1px solid var(--accent);
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+}
+
+.create-google-btn:hover {
+  background: #f3f4f6;
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.create-google-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.create-bottom {
+  width: 100%;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.create-login-link {
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.create-login-link:hover {
+  color: var(--secondary);
+}
+
+.create-footer {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.create-footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.create-footer a:hover {
+  color: var(--primary);
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .create-root {
+    padding: 1rem;
+  }
+
+  .create-div {
+    padding: 1.5rem;
+    max-width: 100%;
+  }
+
+  .create-header {
+    margin-bottom: 1rem;
+  }
+
+  .create-title {
+    font-size: 1.5rem;
+  }
+
+  .create-desc {
+    font-size: 0.9rem;
+  }
+
+  .create-input-div input {
+    padding: 0.65rem;
+    font-size: 0.9rem;
+  }
+
+  .create-btn,
+  .create-google-btn {
+    padding: 0.65rem;
+    font-size: 0.9rem;
+  }
+
+  .create-footer {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}

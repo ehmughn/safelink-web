@@ -1,0 +1,15 @@
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/Inter.ttf") format("truetype");
+}
+
+.brand-logo-div {
+  display: inline-flex;
+  align-items: center;
+}
+
+.brand-logo-div p {
+  font-size: 22px;
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+}
