@@ -27,6 +27,7 @@ const CreateAccount = () => {
   const createAccount = async (e) => {
     e.preventDefault();
     setError("");
+
     if (
       !firstName ||
       !lastName ||
@@ -52,6 +53,7 @@ const CreateAccount = () => {
       setError("Passwords do not match.");
       return;
     }
+
     try {
       const result = await createUserWithEmailAndPassword(
         auth,
@@ -77,8 +79,8 @@ const CreateAccount = () => {
         isAuth: true,
       };
       localStorage.setItem("auth", JSON.stringify(authInfo));
-      await setDoc(doc(db, "Users", result.user.uid), authInfo);
-      navigate("../");
+      await setDoc(doc(db, "users", result.user.uid), authInfo);
+      navigate("/");
     } catch (error) {
       if (error.code === "auth/email-already-in-use") {
         setError("This email is already registered.");
@@ -89,11 +91,13 @@ const CreateAccount = () => {
       } else {
         setError("Failed to create account. Please try again.");
       }
+    } finally {
     }
   };
 
   const createAccountWithGoogle = async () => {
     setError("");
+
     try {
       const result = await signInWithPopup(auth, googleProvider);
       console.log(result.user);
@@ -127,7 +131,7 @@ const CreateAccount = () => {
       };
       localStorage.setItem("auth", JSON.stringify(authInfo));
       await setDoc(doc(db, "users", result.user.uid), authInfo);
-      navigate("../");
+      navigate("/");
     } catch (error) {
       if (error.code === "auth/popup-closed-by-user") {
         setError("Google sign up was cancelled.");

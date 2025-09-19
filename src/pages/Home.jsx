@@ -1,28 +1,35 @@
 import { useState } from "react";
 import { auth } from "../config/firebase";
 import { signOut } from "firebase/auth";
+import {
+  Bell,
+  Users,
+  MapPin,
+  CheckCircle,
+  AlertTriangle,
+  Volume2,
+} from "lucide-react";
+import { MapContainer, TileLayer } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import "../styles/Home.css";
 import BrandLogo from "../components/BrandLogo";
-import BellIcon from "../assets/bell-icon.png";
-import FamilyIcon from "../assets/family-icon.png";
-import MapIcon from "../assets/map-icon.png";
-import CheckIcon from "../assets/check-icon.png";
-import LocationIcon from "../assets/location-icon.png";
-import GoBagIcon from "../assets/gobag-icon.png";
-import AvatarIcon from "../assets/avatar-icon.png";
 
 // TEMPORARY
 const familyMembers = [
-  { name: "Carl", avatar: AvatarIcon },
-  { name: "Kristine", avatar: AvatarIcon },
-  { name: "Kevin", avatar: AvatarIcon },
-  { name: "Mark", avatar: AvatarIcon },
+  { name: "Thomas", status: "SAFE", avatar: null },
+  { name: "Kari", status: "NO RESPONSE", avatar: null },
+  { name: "Martha", status: "UNKNOWN", avatar: null },
+  { name: "Maine", status: "DANGER", avatar: null },
 ];
 
 const Home = () => {
   const [alerts, setAlerts] = useState([
-    { id: 1, text: "Typhoon Warning", severity: "high" },
-    { id: 2, text: "Cavite sgnl #2", severity: "medium" },
+    {
+      id: 1,
+      text: "A typhoon warning has been issued for your area.",
+      severity: "high",
+    },
+    { id: 2, text: "Earthquake alert", severity: "medium" },
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -51,6 +58,7 @@ const Home = () => {
       <header className="home-header" role="banner">
         <div className="home-header-left">
           <BrandLogo safe="white" link="white" />
+          <span className="home-language-toggle">EN | FIL</span>
         </div>
         <button
           className="home-nav-toggle"
@@ -74,100 +82,121 @@ const Home = () => {
           <a href="#">Settings</a>
         </nav>
         <div className="home-avatar" role="img" aria-label="User profile">
-          <img src="/assets/avatar-user.png" alt="User profile" />
+          <span>Maria</span>
         </div>
       </header>
 
       {/* Welcome */}
       <section className="home-welcome-block" aria-labelledby="welcome-heading">
         <h1 id="welcome-heading" className="home-welcome">
-          Welcome, Maria
+          DISASTER PREPAREDNESS
         </h1>
-        <p className="home-welcome-sub">Your Family Safety Dashboard</p>
       </section>
 
       {/* Dashboard Grid */}
-      <div className="home-dashboard-grid" role="grid">
-        <div className="home-card home-card-alert" role="gridcell" tabIndex="0">
-          <div className="home-card-icon-bg">
-            <img src={BellIcon} alt="Emergency Broadcast" />
-          </div>
-          <span>Emergency Broadcast</span>
-        </div>
-        <div className="home-card" role="gridcell" tabIndex="0">
-          <div className="home-card-icon-bg">
-            <img src={FamilyIcon} alt="Add Family Member" />
-          </div>
-          <span>Add Family Member</span>
-        </div>
-        <div className="home-card" role="gridcell" tabIndex="0">
-          <div className="home-card-icon-bg">
-            <img src={MapIcon} alt="Nearest Evacuation Center" />
-          </div>
-          <span>Nearest Evacuation</span>
-        </div>
-        <div className="home-card home-card-gobag" role="gridcell" tabIndex="0">
-          <div className="home-card-icon-bg">
-            <img src={CheckIcon} alt="Go-Bag Checklist" />
-          </div>
-          <span>Go-Bag Checklist</span>
-        </div>
-
-        {/* Real Alerts */}
+      <div className="home-dashboard" role="grid">
+        {/* Alerts Section */}
         <section className="home-alerts" aria-labelledby="alerts-title">
-          <h2 id="alerts-title" className="home-alerts-title">
-            Active Alerts
+          <h2 id="alerts-title" className="home-section-title">
+            ALERTS
           </h2>
-          <div className="home-alerts-list">
-            {alerts.map((alert) => (
+          <div className="home-alert-message">{alerts[0].text}</div>
+          <button
+            className="home-action-btn home-im-safe"
+            aria-label="I'm Safe Check-In"
+          >
+            I'M SAFE
+          </button>
+        </section>
+
+        {/* Family Status */}
+        <section className="home-family" aria-labelledby="family-title">
+          <h2 id="family-title" className="home-section-title">
+            Family Status
+          </h2>
+          <div className="home-family-list">
+            {familyMembers.map((member) => (
               <div
-                key={alert.id}
-                className={`home-alert-item home-alert-${alert.severity}`}
+                key={member.name}
+                className={`home-family-member home-status-${member.status
+                  .toLowerCase()
+                  .replace(" ", "-")}`}
+                role="listitem"
               >
-                {alert.text}
+                <span>{member.name}</span>
+                <span>{member.status}</span>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Map Section */}
-        <div className="home-map" role="img" aria-label="Location map">
-          <img src="/assets/map.png" alt="Location map" />
-        </div>
-
-        {/* Family List */}
-        <section className="home-family-list" aria-labelledby="family-title">
-          <h2 id="family-title" className="home-family-title">
-            Family Members
+        {/* Evacuation Map */}
+        <section className="home-evacuation" aria-labelledby="evacuation-title">
+          <h2 id="evacuation-title" className="home-section-title">
+            Nearest Evacuation Center
           </h2>
-          {familyMembers.map((member) => (
-            <div
-              key={member.name}
-              className="home-family-member"
-              role="listitem"
-            >
-              <div className="home-family-avatar-bg">
-                <img src={member.avatar} alt={`${member.name}'s avatar`} />
-              </div>
-              <span>{member.name}</span>
-            </div>
-          ))}
+          <MapContainer center={[14.5547, 121.0244]} zoom={13}>
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+          </MapContainer>
         </section>
 
-        {/* Location Card */}
-        <div
-          className="home-card home-card-location"
-          role="gridcell"
-          tabIndex="0"
-        >
-          <div className="home-card-icon-bg">
-            <img src="/assets/location-icon.png" alt="Current Location" />
+        {/* Go-Bag Checklist */}
+        <section className="home-gobag" aria-labelledby="gobag-title">
+          <h2 id="gobag-title" className="home-section-title">
+            Go-Bag Checklist
+          </h2>
+          <div className="home-gobag-progress">
+            <CheckCircle
+              className="home-gobag-icon"
+              aria-label="Check Icon"
+              size={24}
+              color="#1A1A1A"
+            />
+            <span>Water</span>
+            <span className="home-gobag-check">✔</span>
+            <span>Food</span>
+            <span className="home-gobag-progress-value">75%</span>
           </div>
-          <span>Current Location</span>
-        </div>
+        </section>
 
-        {/* Empty Card for spacing */}
-        <div className="home-card home-card-empty" role="gridcell"></div>
+        {/* Latest Alerts */}
+        <section
+          className="home-latest-alerts"
+          aria-labelledby="latest-alerts-title"
+        >
+          <h2 id="latest-alerts-title" className="home-section-title">
+            Latest Alerts
+          </h2>
+          <div className="home-latest-alerts-list">
+            {alerts.map((alert) => (
+              <div key={alert.id} className="home-latest-alert-item">
+                {alert.text}{" "}
+                <span className="home-alert-time">
+                  {alert.severity === "high" ? "1 hour ago" : "RHI/VOLCS ago"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Official Announcements */}
+        <section
+          className="home-announcements"
+          aria-labelledby="announcements-title"
+        >
+          <h2 id="announcements-title" className="home-section-title">
+            Official Announcements
+          </h2>
+          <div className="home-announcements-list">
+            <div className="home-announcement-item">
+              Emergency shelters are now open{" "}
+              <span className="home-announcement-time">1 hour ago</span>
+            </div>
+          </div>
+        </section>
       </div>
 
       {/* Action Buttons */}
@@ -184,27 +213,36 @@ const Home = () => {
             className="home-action-btn"
             aria-label="Initiate Family Check-In"
           >
-            <span className="home-action-icon">
-              <img src={FamilyIcon} alt="Family Check-In" />
-            </span>
+            <Users
+              className="home-action-icon"
+              aria-label="Family Icon"
+              size={24}
+              color="white"
+            />
             Family Check-In
           </button>
           <button
             className="home-action-btn"
             aria-label="Find Current Location"
           >
-            <span className="home-action-icon">
-              <img src={LocationIcon} alt="Find Location" />
-            </span>
+            <MapPin
+              className="home-action-icon"
+              aria-label="Location Icon"
+              size={24}
+              color="white"
+            />
             Find Location
           </button>
           <button
             className="home-action-btn"
             aria-label="Edit Go-Bag Checklist"
           >
-            <span className="home-action-icon">
-              <img src={GoBagIcon} alt="Edit Go-Bag" />
-            </span>
+            <CheckCircle
+              className="home-action-icon"
+              aria-label="Go-Bag Icon"
+              size={24}
+              color="white"
+            />
             Edit Go-Bag
           </button>
         </div>

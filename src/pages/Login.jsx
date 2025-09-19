@@ -18,6 +18,7 @@ const Login = () => {
 
   const logIn = async () => {
     setError("");
+
     if (!email || !password) {
       setError("Please enter both email and password.");
       return;
@@ -26,6 +27,7 @@ const Login = () => {
       setError("Please enter a valid email address.");
       return;
     }
+
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       const authInfo = {
@@ -47,11 +49,13 @@ const Login = () => {
       } else {
         setError("Failed to log in. Please try again.");
       }
+      console.log(error);
     }
   };
 
   const logInWithGoogle = async () => {
     setError("");
+
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const authInfo = {
@@ -68,6 +72,7 @@ const Login = () => {
       } else {
         setError("Failed to log in with Google. Please try again.");
       }
+    } finally {
     }
   };
 

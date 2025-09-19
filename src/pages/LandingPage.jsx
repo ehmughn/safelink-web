@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  AlertTriangle,
+  CheckCircle,
+  Map,
+  ClipboardList,
+  Bell,
+  Laptop,
+  Smartphone,
+} from "lucide-react";
 import "../styles/LandingPage.css";
 import BrandLogo from "../components/BrandLogo";
-import HeroDevices from "../assets/hero-devices.png";
-import AlertIcon from "../assets/alert-icon.png";
-import CheckInIcon from "../assets/checkin-icon.png";
-import MapIcon from "../assets/map-icon.png";
-import ListIcon from "../assets/list-icon.png";
-import BellIcon from "../assets/bell-icon.png";
-import LaptopIcon from "../assets/laptop-icon.png";
+import HeroIcon from "../assets/hero-devices.png";
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -71,7 +74,7 @@ const LandingPage = () => {
           </div>
         </div>
         <div className="lp-hero-img">
-          <img src={HeroDevices} alt="SafeLink Devices" loading="lazy" />
+          <img src={HeroIcon} alt="SafeLink Devices" loading="lazy" />
         </div>
       </section>
 
@@ -86,22 +89,42 @@ const LandingPage = () => {
         </h2>
         <div className="lp-features-grid">
           <div className="lp-feature-card" role="article">
-            <img src={AlertIcon} alt="Real-Time Alerts" loading="lazy" />
+            <AlertTriangle
+              className="lp-feature-icon"
+              aria-label="Real-Time Alerts"
+              size={48}
+              color="#FF5A1F"
+            />
             <h3>Real-Time Alerts</h3>
             <p>Receive instant updates from PAGASA-PHIVOLCS.</p>
           </div>
           <div className="lp-feature-card" role="article">
-            <img src={CheckInIcon} alt="Family Safe Check-in" loading="lazy" />
+            <CheckCircle
+              className="lp-feature-icon"
+              aria-label="Family Safe Check-in"
+              size={48}
+              color="#FF5A1F"
+            />
             <h3>Family Check-In</h3>
             <p>Quickly confirm safety with one-tap check-ins.</p>
           </div>
           <div className="lp-feature-card" role="article">
-            <img src={MapIcon} alt="Evacuation Center Map" loading="lazy" />
+            <Map
+              className="lp-feature-icon"
+              aria-label="Evacuation Center Map"
+              size={48}
+              color="#FF5A1F"
+            />
             <h3>Evacuation Maps</h3>
             <p>Locate the nearest safe evacuation zones.</p>
           </div>
           <div className="lp-feature-card" role="article">
-            <img src={ListIcon} alt="Go-Bag Checklist" loading="lazy" />
+            <ClipboardList
+              className="lp-feature-icon"
+              aria-label="Go-Bag Checklist"
+              size={48}
+              color="#FF5A1F"
+            />
             <h3>Go-Bag Checklist</h3>
             <p>Auto-generated emergency kit checklist.</p>
           </div>
@@ -115,22 +138,42 @@ const LandingPage = () => {
         </h2>
         <div className="lp-how-steps">
           <div className="lp-how-step" role="listitem">
-            <img src={BellIcon} alt="Receive Alerts" loading="lazy" />
+            <Bell
+              className="lp-how-icon"
+              aria-label="Receive Alerts"
+              size={40}
+              color="#FF5A1F"
+            />
             <span>Receive Alerts</span>
           </div>
           <span className="lp-how-arrow">→</span>
           <div className="lp-how-step" role="listitem">
-            <img src={LaptopIcon} alt="Check In Family" loading="lazy" />
+            <Laptop
+              className="lp-how-icon"
+              aria-label="Check In Family"
+              size={40}
+              color="#FF5A1F"
+            />
             <span>Check In Family</span>
           </div>
           <span className="lp-how-arrow">→</span>
           <div className="lp-how-step" role="listitem">
-            <img src={MapIcon} alt="Find Evacuation" loading="lazy" />
+            <Map
+              className="lp-how-icon"
+              aria-label="Find Evacuation"
+              size={40}
+              color="#FF5A1F"
+            />
             <span>Find Evacuation</span>
           </div>
           <span className="lp-how-arrow">→</span>
           <div className="lp-how-step" role="listitem">
-            <img src={ListIcon} alt="Plan With Go-Bag" loading="lazy" />
+            <ClipboardList
+              className="lp-how-icon"
+              aria-label="Plan With Go-Bag"
+              size={40}
+              color="#FF5A1F"
+            />
             <span>Plan With Go-Bag</span>
           </div>
         </div>
