@@ -4,6 +4,8 @@ import Home from "./pages/Home";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import CreateAccount from "./pages/CreateAccount";
+import Family from "./pages/Family";
+import ForgotPassword from "./pages/ForgotPassword";
 import { auth } from "./config/firebase";
 
 function App() {
@@ -25,6 +27,8 @@ function App() {
           path="/create-account"
           element={user ? <Navigate to="/" /> : <CreateAccount />}
         />
+        <Route path="/family" element={<Family />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
     </>
   );

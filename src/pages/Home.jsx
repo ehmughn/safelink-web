@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { auth } from "../config/firebase";
 import { signOut } from "firebase/auth";
 import {
@@ -13,6 +13,10 @@ import { MapContainer, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import "../styles/Home.css";
 import BrandLogo from "../components/BrandLogo";
+import ImSafeButton from "../components/ImSafeButton";
+import FamilyStatusCard from "../components/FamilyStatusCard";
+import { FamilyService } from "../services/familyService";
+import { SafeStatusService } from "../services/safeStatusService";
 
 // TEMPORARY
 const familyMembers = [
@@ -34,6 +38,134 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState([]);
+  const [familyCode, setFamilyCode] = useState(null);
+  const [user, setUser] = useState(null);
+  const [familyLoading, setFamilyLoading] = useState(true);
+
+  // Load user and family data on component mount
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        await loadFamilyData(firebaseUser.uid);
+      } else {
+        setUser(null);
+        setFamilyCode(null);
+        setFamilyMembers([]);
+        setFamilyLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Load family data for current user
+  const loadFamilyData = async (userId) => {
+    setFamilyLoading(true);
+    try {
+      const familyResult = await FamilyService.getUserFamilyCode(userId);
+
+      if (familyResult.success && familyResult.familyCode) {
+        setFamilyCode(familyResult.familyCode);
+
+        // Subscribe to family updates for real-time data
+        const unsubscribe = FamilyService.subscribeFamilyUpdates(
+          familyResult.familyCode,
+          (result) => {
+            if (result.success && result.data) {
+              setFamilyMembers(result.data.members || []);
+            }
+            setFamilyLoading(false);
+          }
+        );
+
+        // Store unsubscribe function for cleanup
+        return unsubscribe;
+      } else {
+        setFamilyCode(null);
+        setFamilyMembers([]);
+        setFamilyLoading(false);
+      }
+    } catch (error) {
+      console.error("Error loading family data:", error);
+      setFamilyLoading(false);
+    }
+  };
+
+  // Handle "I'm Safe" button click
+  const handleSafeUpdate = async (location = null) => {
+    if (!user) {
+      return { success: false, error: "User not authenticated" };
+    }
+
+    try {
+      const result = await SafeStatusService.recordSafeStatus(
+        user.uid,
+        location,
+        "Manual check-in from home dashboard"
+      );
+
+      if (result.success) {
+        // Show success feedback (you could add a toast notification here)
+        console.log("Safe status updated successfully");
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Error updating safe status:", error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Handle family check-in request
+  const handleFamilyCheckIn = async () => {
+    if (!user || !familyCode) return;
+
+    try {
+      const result = await FamilyService.sendFamilyCheckIn(
+        familyCode,
+        user.uid,
+        user.displayName || user.email
+      );
+
+      if (result.success) {
+        // Show success message (you could add a toast notification here)
+        console.log("Family check-in request sent successfully");
+      }
+    } catch (error) {
+      console.error("Error sending family check-in:", error);
+    }
+  };
+
+  // Handle SOS alert
+  const handleSOSAlert = async () => {
+    if (!user) return;
+
+    try {
+      // Get current location if possible
+      const locationResult = await SafeStatusService.getCurrentLocation();
+      const location = locationResult.success ? locationResult.location : null;
+
+      const result = await SafeStatusService.sendSOSAlert(
+        user.uid,
+        location,
+        "Emergency SOS alert from home dashboard"
+      );
+
+      if (result.success) {
+        console.log("SOS alert sent successfully");
+      }
+    } catch (error) {
+      console.error("Error sending SOS alert:", error);
+    }
+  };
+
+  // Handle family member click
+  const handleMemberClick = (member) => {
+    // Navigate to member details or show more info
+    console.log("Member clicked:", member);
+  };
 
   const logOut = async () => {
     setIsLoading(true);
@@ -101,33 +233,23 @@ const Home = () => {
             ALERTS
           </h2>
           <div className="home-alert-message">{alerts[0].text}</div>
-          <button
-            className="home-action-btn home-im-safe"
-            aria-label="I'm Safe Check-In"
-          >
-            I'M SAFE
-          </button>
+          <ImSafeButton onSafeUpdate={handleSafeUpdate} size="normal" />
         </section>
 
         {/* Family Status */}
-        <section className="home-family" aria-labelledby="family-title">
-          <h2 id="family-title" className="home-section-title">
-            Family Status
-          </h2>
-          <div className="home-family-list">
-            {familyMembers.map((member) => (
-              <div
-                key={member.name}
-                className={`home-family-member home-status-${member.status
-                  .toLowerCase()
-                  .replace(" ", "-")}`}
-                role="listitem"
-              >
-                <span>{member.name}</span>
-                <span>{member.status}</span>
-              </div>
-            ))}
-          </div>
+        <section
+          className="home-family"
+          aria-labelledby="family-title"
+          style={{ cursor: "pointer" }}
+          onClick={() => window.location.assign("/family")}
+        >
+          <FamilyStatusCard
+            familyMembers={familyMembers}
+            onRequestCheckIn={handleFamilyCheckIn}
+            onMemberClick={handleMemberClick}
+            isLoading={familyLoading}
+            showCheckInButton={true}
+          />
         </section>
 
         {/* Evacuation Map */}
@@ -148,18 +270,24 @@ const Home = () => {
           <h2 id="gobag-title" className="home-section-title">
             Go-Bag Checklist
           </h2>
-          <div className="home-gobag-progress">
-            <CheckCircle
-              className="home-gobag-icon"
-              aria-label="Check Icon"
-              size={24}
-              color="#1A1A1A"
-            />
-            <span>Water</span>
-            <span className="home-gobag-check">✔</span>
-            <span>Food</span>
-            <span className="home-gobag-progress-value">75%</span>
-          </div>
+          <form className="home-gobag-checklist">
+            <label className="home-gobag-item">
+              <input type="checkbox" />
+              <span className="home-gobag-label">Food</span>
+            </label>
+            <label className="home-gobag-item">
+              <input type="checkbox" />
+              <span className="home-gobag-label">Water</span>
+            </label>
+            <label className="home-gobag-item">
+              <input type="checkbox" />
+              <span className="home-gobag-label">Clothes</span>
+            </label>
+            <label className="home-gobag-item">
+              <input type="checkbox" />
+              <span className="home-gobag-label">Flashlight</span>
+            </label>
+          </form>
         </section>
 
         {/* Latest Alerts */}
@@ -205,6 +333,7 @@ const Home = () => {
           <button
             className="home-action-btn home-action-sos"
             aria-label="Send SOS Notification"
+            onClick={handleSOSAlert}
           >
             <span className="home-action-desc">SOS</span>
             Notify All
@@ -212,6 +341,7 @@ const Home = () => {
           <button
             className="home-action-btn"
             aria-label="Initiate Family Check-In"
+            onClick={handleFamilyCheckIn}
           >
             <Users
               className="home-action-icon"

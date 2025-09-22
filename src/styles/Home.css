@@ -7,7 +7,13 @@
   --text-secondary: #4b5563;
   --accent: #d1d5db;
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.15);
   --transition: all 0.3s ease;
+  --border-radius: 12px;
+  --border-radius-sm: 8px;
+  --gradient-primary: linear-gradient(135deg, #ff5a1f 0%, #ff7849 100%);
+  --gradient-hover: linear-gradient(135deg, #ff7849 0%, #ff5a1f 100%);
 }
 
 .home-root {
@@ -139,41 +145,84 @@
 }
 
 .home-alert-message {
-  background: var(--primary);
+  background: var(--gradient-primary);
   color: #ffffff;
-  padding: 0.75rem;
-  border-radius: 0.25rem;
-  margin-bottom: 1rem;
-  font-size: 0.95rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+  box-shadow: var(--shadow-subtle);
+  position: relative;
+  overflow: hidden;
+}
+
+.home-alert-message::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
 }
 
 .home-im-safe {
-  background: var(--primary);
+  background: var(--gradient-primary);
   color: #ffffff;
   border: none;
   font-weight: 600;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.25rem;
+  padding: 1rem 2rem;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
   width: 100%;
   margin-bottom: 1rem;
-  transition: background var(--transition);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.home-im-safe::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s;
+}
+
+.home-im-safe:hover::before {
+  left: 100%;
 }
 
 .home-im-safe:hover {
-  background: var(--secondary);
+  background: var(--gradient-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
 }
 
 .home-family {
   background: var(--card-bg);
-  border-radius: 0.5rem;
+  border-radius: var(--border-radius);
   box-shadow: var(--shadow);
-  padding: 1.5rem;
-  transition: transform var(--transition);
+  padding: 2rem;
+  transition: var(--transition);
+  border: 1px solid rgba(255, 90, 31, 0.05);
+  position: relative;
 }
 
 .home-family:hover {
-  transform: translateY(-2px);
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-hover);
+  border-color: rgba(255, 90, 31, 0.1);
 }
 
 .home-family-list {
@@ -185,14 +234,19 @@
 .home-family-member {
   display: flex;
   justify-content: space-between;
-  padding: 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.9rem;
-  transition: background var(--transition);
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.95rem;
+  transition: var(--transition);
+  margin-bottom: 0.5rem;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .home-family-member:hover {
-  background: #f0f4f8;
+  background: rgba(255, 255, 255, 0.8);
+  transform: translateX(5px);
+  box-shadow: var(--shadow-subtle);
 }
 
 .home-status-safe {
@@ -210,15 +264,17 @@
 
 .home-evacuation {
   background: var(--card-bg);
-  border-radius: 0.5rem;
+  border-radius: var(--border-radius);
   box-shadow: var(--shadow);
-  padding: 1.5rem;
-  transition: transform var(--transition);
-  grid-column: span 1; /* Ensure it takes only one column */
+  padding: 2rem;
+  transition: var(--transition);
+  grid-column: span 1;
+  border: 1px solid rgba(255, 90, 31, 0.05);
 }
 
 .home-evacuation:hover {
-  transform: translateY(-2px);
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-hover);
 }
 
 .home-map-interactive {
@@ -230,48 +286,73 @@
 
 .home-gobag {
   background: var(--card-bg);
-  border-radius: 0.5rem;
+  border-radius: var(--border-radius);
   box-shadow: var(--shadow);
-  padding: 1.5rem;
-  transition: transform var(--transition);
+  padding: 2rem;
+  transition: var(--transition);
+  border: 1px solid rgba(255, 90, 31, 0.05);
 }
 
 .home-gobag:hover {
-  transform: translateY(-2px);
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-hover);
 }
 
-.home-gobag-progress {
+.home-gobag-checklist {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  font-size: 0.9rem;
+  gap: 1rem;
+  margin-top: 1rem;
 }
 
-.home-gobag-icon {
-  margin-right: 0.5rem;
+.home-gobag-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius-sm);
+  background: rgba(255, 255, 255, 0.6);
+  transition: var(--transition);
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
 }
 
-.home-gobag-check {
-  color: #1aab5a;
+.home-gobag-item:hover {
+  background: rgba(255, 90, 31, 0.05);
+  transform: translateX(5px);
+  box-shadow: var(--shadow-subtle);
+  border-color: rgba(255, 90, 31, 0.2);
 }
 
-.home-gobag-progress-value {
-  font-weight: 600;
-  color: var(--primary);
+.home-gobag-label {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.home-gobag-item input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 1.2em;
+  height: 1.2em;
+  margin-right: 0.5em;
 }
 
 .home-latest-alerts,
 .home-announcements {
   background: var(--card-bg);
-  border-radius: 0.5rem;
+  border-radius: var(--border-radius);
   box-shadow: var(--shadow);
-  padding: 1.5rem;
-  transition: transform var(--transition);
+  padding: 2rem;
+  transition: var(--transition);
+  border: 1px solid rgba(255, 90, 31, 0.05);
 }
 
 .home-latest-alerts:hover,
 .home-announcements:hover {
-  transform: translateY(-2px);
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-hover);
 }
 
 .home-latest-alerts-list,
@@ -283,16 +364,20 @@
 
 .home-latest-alert-item,
 .home-announcement-item {
-  font-size: 0.9rem;
-  padding: 0.5rem;
-  border-radius: 0.25rem;
-  background: #f0f4f8;
-  transition: background var(--transition);
+  font-size: 0.95rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius-sm);
+  background: rgba(255, 255, 255, 0.6);
+  transition: var(--transition);
+  margin-bottom: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .home-latest-alert-item:hover,
 .home-announcement-item:hover {
-  background: #e0e7ff;
+  background: rgba(255, 90, 31, 0.05);
+  transform: translateX(3px);
+  border-color: rgba(255, 90, 31, 0.2);
 }
 
 .home-alert-time,
@@ -305,41 +390,85 @@
   display: flex;
   justify-content: center;
   margin: 0 2rem 2rem;
+  animation: fadeInUp 0.8s ease-out 0.6s both;
 }
 
 .home-actions {
   display: flex;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 1.25rem;
+  padding: 1.5rem;
   flex-wrap: wrap;
   justify-content: center;
-  background: var(--card-bg);
-  border-radius: 0.5rem;
-  box-shadow: var(--shadow);
+  background: linear-gradient(135deg, var(--card-bg) 0%, #fff7ef 100%);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-hover);
+  border: 1px solid rgba(255, 90, 31, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.home-actions::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--gradient-primary);
 }
 
 .home-action-btn {
-  background: var(--primary);
+  background: var(--gradient-primary);
   color: #ffffff;
   border: none;
   font-weight: 600;
   font-size: 0.95rem;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.25rem;
+  padding: 1rem 1.5rem;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 120px;
-  transition: background var(--transition);
+  min-width: 130px;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  gap: 0.5rem;
+}
+
+.home-action-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s;
+}
+
+.home-action-btn:hover::before {
+  left: 100%;
 }
 
 .home-action-btn:hover {
-  background: var(--secondary);
+  background: var(--gradient-hover);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: var(--shadow-hover);
+}
+
+.home-action-btn:active {
+  transform: translateY(-2px) scale(1.01);
 }
 
 .home-action-icon {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
+  transition: var(--transition);
+}
+
+.home-action-btn:hover .home-action-icon {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .home-action-desc {
@@ -357,21 +486,41 @@
 }
 
 .home-logout-btn {
-  background: var(--card-bg);
+  background: linear-gradient(135deg, var(--card-bg) 0%, #f8fafc 100%);
   color: var(--primary);
-  border: 1px solid var(--secondary);
-  font-weight: 500;
+  border: 2px solid var(--primary);
+  font-weight: 600;
   font-size: 0.95rem;
-  padding: 0.75rem 2rem;
-  border-radius: 0.25rem;
+  padding: 0.875rem 2.5rem;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
-  transition: all var(--transition);
+  transition: var(--transition);
   box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.home-logout-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 90, 31, 0.1), transparent);
+  transition: left 0.6s;
+}
+
+.home-logout-btn:hover::before {
+  left: 100%;
 }
 
 .home-logout-btn:hover {
-  background: #fff7ef;
-  transform: translateY(-2px);
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-hover);
 }
 
 .home-logout-btn:disabled {
@@ -443,4 +592,25 @@
     min-width: 100px;
     padding: 0.5rem 1rem;
   }
+}
+
+/* SOS Button Special Styling */
+.home-action-sos {
+  background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+  }
+}
+
+.home-action-sos:hover {
+  background: linear-gradient(135deg, #b91c1c, #dc2626) !important;
 }

@@ -84,6 +84,10 @@ const Login = () => {
     navigate("../");
   };
 
+  const goToForgotPassword = () => {
+    navigate("/forgot-password");
+  };
+
   return (
     <div className="login-root">
       <header className="login-header">
@@ -134,9 +138,16 @@ const Login = () => {
             <label className="login-remember">
               <input type="checkbox" aria-label="Remember me" /> Remember me
             </label>
-            <a className="login-forgot" href="#" aria-label="Forgot password">
+            <span
+              className="login-forgot"
+              role="button"
+              tabIndex={0}
+              onClick={goToForgotPassword}
+              aria-label="Forgot password"
+              style={{ cursor: "pointer" }}
+            >
               Forgot password?
-            </a>
+            </span>
           </div>
           {error && (
             <div className="login-error" role="alert">
