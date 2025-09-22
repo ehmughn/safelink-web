@@ -11,8 +11,102 @@ import {
   Settings,
   LogOut,
   AlertTriangle,
+  X,
 } from "lucide-react";
 import "../styles/Family.css";
+
+// Simplified inline modal components (replace with actual components if needed)
+const SettingsModal = ({ onClose }) => (
+  <div className="modal">
+    <div className="modal-content">
+      <h3>Family Settings</h3>
+      <button onClick={onClose}>Close</button>
+    </div>
+  </div>
+);
+
+const ConfirmationModal = ({ message, onConfirm, onCancel, isLoading }) => {
+  const [isOpen, setIsOpen] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsOpen(false);
+      onCancel?.();
+    }, 30000); // Auto-close after 30 seconds
+
+    const handleEsc = (event) => {
+      if (event.key === "Escape" && isOpen) {
+        setIsOpen(false);
+        onCancel?.();
+      }
+    };
+
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [onCancel, isOpen]);
+
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      setIsOpen(false);
+      onCancel?.();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="modal"
+      role="dialog"
+      aria-labelledby="modal-title"
+      onClick={handleOverlayClick}
+    >
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3 id="modal-title" className="modal-title">
+            Confirmation
+          </h3>
+          <button
+            className="modal-close"
+            onClick={() => {
+              setIsOpen(false);
+              onCancel?.();
+            }}
+            aria-label="Close modal"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <p>{message}</p>
+        <div className="modal-actions">
+          <button
+            onClick={() => {
+              setIsOpen(false);
+              onConfirm();
+            }}
+            disabled={isLoading}
+            aria-label="Confirm action"
+          >
+            {isLoading ? "Processing..." : "Confirm"}
+          </button>
+          <button
+            onClick={() => {
+              setIsOpen(false);
+              onCancel?.();
+            }}
+            disabled={isLoading}
+            aria-label="Cancel action"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Family = () => {
   const navigate = useNavigate();
@@ -25,6 +119,9 @@ const Family = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
@@ -40,17 +137,14 @@ const Family = () => {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Check if user is already in a family
   const checkUserFamilyStatus = async (userId) => {
     try {
       const result = await FamilyService.getUserFamilyCode(userId);
 
       if (result.success && result.familyCode) {
-        // User is already in a family, load family data
         await loadFamilyData(result.familyCode);
         setView("family");
       } else {
-        // User is not in a family
         setView("start");
       }
     } catch (error) {
@@ -60,7 +154,6 @@ const Family = () => {
     }
   };
 
-  // Load family data and subscribe to updates
   const loadFamilyData = async (code) => {
     try {
       const result = await FamilyService.getFamilyData(code);
@@ -70,7 +163,6 @@ const Family = () => {
         setFamilyMembers(result.data.members || []);
         setFamilyCode(code);
 
-        // Subscribe to real-time updates
         const unsubscribe = FamilyService.subscribeFamilyUpdates(
           code,
           (updateResult) => {
@@ -81,7 +173,6 @@ const Family = () => {
           }
         );
 
-        // Store unsubscribe function for cleanup
         return unsubscribe;
       } else {
         setError(result.error || "Failed to load family data");
@@ -92,12 +183,16 @@ const Family = () => {
     }
   };
 
-  // Create a new family
   const handleCreateFamily = async () => {
     if (!user) return;
 
     setIsLoading(true);
     setError(null);
+    setProgress(0);
+
+    const interval = setInterval(() => {
+      setProgress((prev) => (prev >= 90 ? 90 : prev + 10));
+    }, 500);
 
     try {
       const result = await FamilyService.createFamily(
@@ -116,16 +211,22 @@ const Family = () => {
       console.error("Error creating family:", error);
       setError("Failed to create family. Please try again.");
     } finally {
+      clearInterval(interval);
+      setProgress(100);
       setIsLoading(false);
     }
   };
 
-  // Join a family using 6-digit code
   const handleJoinFamily = async (code) => {
     if (!user || !code) return;
 
     setIsLoading(true);
     setError(null);
+    setProgress(0);
+
+    const interval = setInterval(() => {
+      setProgress((prev) => (prev >= 90 ? 90 : prev + 10));
+    }, 500);
 
     try {
       const result = await FamilyService.joinFamily(
@@ -145,11 +246,12 @@ const Family = () => {
       console.error("Error joining family:", error);
       setError("Failed to join family. Please check the code and try again.");
     } finally {
+      clearInterval(interval);
+      setProgress(100);
       setIsLoading(false);
     }
   };
 
-  // Copy family code to clipboard
   const copyCodeToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(generatedCode);
@@ -160,7 +262,6 @@ const Family = () => {
     }
   };
 
-  // Share family code using Web Share API or fallback
   const shareCode = async () => {
     const shareData = {
       title: "SafeLink Family Code",
@@ -172,7 +273,6 @@ const Family = () => {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        // Fallback: copy to clipboard
         await copyCodeToClipboard();
       }
     } catch (error) {
@@ -180,17 +280,16 @@ const Family = () => {
     }
   };
 
-  // Leave family
   const handleLeaveFamily = async () => {
     if (!user || !familyCode) return;
 
-    const confirmed = window.confirm(
-      "Are you sure you want to leave this family? This action cannot be undone."
-    );
+    setShowLeaveConfirm(true);
+  };
 
-    if (!confirmed) return;
-
+  const confirmLeaveFamily = async () => {
+    setShowLeaveConfirm(false);
     setIsLoading(true);
+
     try {
       const result = await FamilyService.leaveFamily(familyCode, user.uid);
 
@@ -210,10 +309,10 @@ const Family = () => {
     }
   };
 
-  // Handle family check-in request
   const handleFamilyCheckIn = async () => {
     if (!user || !familyCode) return;
 
+    setIsLoading(true);
     try {
       const result = await FamilyService.sendFamilyCheckIn(
         familyCode,
@@ -222,18 +321,19 @@ const Family = () => {
       );
 
       if (result.success) {
-        // Show success feedback
-        console.log("Check-in request sent");
+        setError("Check-in request sent successfully!");
+        setTimeout(() => setError(null), 3000);
       }
     } catch (error) {
       console.error("Error sending check-in request:", error);
+      setError("Failed to send check-in request");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Handle member click for more details
   const handleMemberClick = (member) => {
     console.log("Member details:", member);
-    // You could open a modal or navigate to member details
   };
 
   if (view === "loading") {
@@ -242,6 +342,14 @@ const Family = () => {
         <div className="family-loading">
           <div className="loading-spinner"></div>
           <p>Loading family information...</p>
+          {progress > 0 && (
+            <div className="progress-bar">
+              <div
+                className="progress-fill"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -394,7 +502,7 @@ const Family = () => {
             <div className="dashboard-actions">
               <button
                 className="settings-btn"
-                onClick={() => console.log("Settings clicked")}
+                onClick={() => setShowSettings(true)}
                 title="Family settings"
               >
                 <Settings size={16} />
@@ -414,7 +522,7 @@ const Family = () => {
             familyMembers={familyMembers}
             onRequestCheckIn={handleFamilyCheckIn}
             onMemberClick={handleMemberClick}
-            isLoading={false}
+            isLoading={isLoading}
             showCheckInButton={true}
           />
 
@@ -443,6 +551,15 @@ const Family = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showLeaveConfirm && (
+        <ConfirmationModal
+          message="Are you sure you want to leave this family? This action cannot be undone."
+          onConfirm={confirmLeaveFamily}
+          onCancel={() => setShowLeaveConfirm(false)}
+        />
       )}
     </div>
   );

@@ -10,21 +10,48 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const validateEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
-  const logIn = async () => {
+  const handleEmailChange = (value) => {
+    setEmail(value);
+    if (!value) {
+      setEmailError("Email is required.");
+    } else if (!validateEmail(value)) {
+      setEmailError("Please enter a valid email address.");
+    } else {
+      setEmailError("");
+    }
+  };
+
+  const handlePasswordChange = (value) => {
+    setPassword(value);
+    if (!value) {
+      setPasswordError("Password is required.");
+    } else {
+      setPasswordError("");
+    }
+  };
+
+  const logIn = async (e) => {
+    e.preventDefault();
     setError("");
+    setIsLoading(true);
 
     if (!email || !password) {
-      setError("Please enter both email and password.");
+      setError("Please fill in all required fields.");
+      setIsLoading(false);
       return;
     }
-    if (!validateEmail(email)) {
-      setError("Please enter a valid email address.");
+    if (emailError || passwordError) {
+      setError("Please correct the errors in the form.");
+      setIsLoading(false);
       return;
     }
 
@@ -50,22 +77,59 @@ const Login = () => {
         setError("Failed to log in. Please try again.");
       }
       console.log(error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logInWithGoogle = async () => {
     setError("");
+    setIsLoading(true);
 
     try {
       const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      let firstName = "";
+      let lastName = "";
+      if (user.displayName) {
+        const nameParts = user.displayName.split(" ");
+        firstName = nameParts[0] || "";
+        lastName = nameParts.slice(1).join(" ") || "";
+      }
       const authInfo = {
-        userId: result.user.uid,
-        name: result.user.displayName,
-        profilePhoto: result.user.photoURL,
+        userId: user.uid,
+        email: user.email,
+        phoneNumber: user.phoneNumber || "",
+        createdAt:
+          user.metadata?.creationTime ||
+          new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }),
+        profile: {
+          address: "",
+          birthdate: "",
+          firstName: firstName,
+          lastName: lastName,
+          role: "family_member",
+        },
+        profilePhoto: user.photoURL || "",
         isAuth: true,
       };
       localStorage.setItem("auth", JSON.stringify(authInfo));
-      navigate("/home");
+
+      // Only setDoc if user does not exist in Firestore
+      try {
+        const { doc, getDoc, setDoc } = await import("firebase/firestore");
+        const { db } = await import("../config/firebase");
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (!userDocSnap.exists()) {
+          await setDoc(userDocRef, authInfo);
+        }
+      } catch (firestoreError) {
+        // Optionally handle Firestore error
+        console.error("Firestore error:", firestoreError);
+      }
+
+      navigate("/");
     } catch (error) {
       if (error.code === "auth/popup-closed-by-user") {
         setError("Google login was cancelled.");
@@ -73,43 +137,49 @@ const Login = () => {
         setError("Failed to log in with Google. Please try again.");
       }
     } finally {
+      setIsLoading(false);
     }
   };
 
   const createAccount = () => {
-    navigate("../create-account");
+    navigate("/create-account");
   };
 
   const goBack = () => {
-    navigate("../");
+    navigate("/");
   };
 
   const goToForgotPassword = () => {
     navigate("/forgot-password");
   };
 
+  const handleKeyDown = (e, action) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      action();
+    }
+  };
+
   return (
     <div className="login-root">
+      <a href="#main-content" className="login-skip-link">
+        Skip to content
+      </a>
       <header className="login-header">
-        <BrandLogo safe="#1A1A1A" link="#FF5A1F" />
+        <BrandLogo safe="#1A1A1A" link="#E63946" />
         <p className="login-tagline">Your Family Safety Dashboard</p>
       </header>
-      <div className="login-div">
+      <main id="main-content" className="login-div">
         <button
           className="login-back-btn"
           onClick={goBack}
           aria-label="Back to Home"
+          disabled={isLoading}
         >
           ←
         </button>
-        <p className="login-title">Sign In</p>
-        <form
-          className="login-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            logIn();
-          }}
-        >
+        <h1 className="login-title">Sign In</h1>
+        <form className="login-form" onSubmit={logIn}>
           <div className="login-input-div">
             <label htmlFor="email">Email Address</label>
             <input
@@ -117,10 +187,17 @@ const Login = () => {
               type="email"
               placeholder="Enter your email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => handleEmailChange(e.target.value)}
               onFocus={() => setError("")}
               aria-required="true"
+              aria-invalid={!!emailError}
+              aria-describedby={emailError ? "email-error" : undefined}
             />
+            {emailError && (
+              <span id="email-error" className="login-input-error" role="alert">
+                {emailError}
+              </span>
+            )}
           </div>
           <div className="login-input-div">
             <label htmlFor="password">Password</label>
@@ -129,10 +206,21 @@ const Login = () => {
               type="password"
               placeholder="Enter your password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => handlePasswordChange(e.target.value)}
               onFocus={() => setError("")}
               aria-required="true"
+              aria-invalid={!!passwordError}
+              aria-describedby={passwordError ? "password-error" : undefined}
             />
+            {passwordError && (
+              <span
+                id="password-error"
+                className="login-input-error"
+                role="alert"
+              >
+                {passwordError}
+              </span>
+            )}
           </div>
           <div className="login-options-row">
             <label className="login-remember">
@@ -143,20 +231,31 @@ const Login = () => {
               role="button"
               tabIndex={0}
               onClick={goToForgotPassword}
+              onKeyDown={(e) => handleKeyDown(e, goToForgotPassword)}
               aria-label="Forgot password"
-              style={{ cursor: "pointer" }}
             >
               Forgot password?
             </span>
           </div>
           {error && (
             <div className="login-error" role="alert">
-              <img src={AlertIcon} alt="" className="login-error-icon" />
+              <img
+                src={AlertIcon}
+                alt="Error icon"
+                className="login-error-icon"
+                width="16"
+                height="16"
+              />
               {error}
             </div>
           )}
-          <button className="login-btn" type="submit" aria-label="Sign In">
-            Sign In
+          <button
+            className="login-btn"
+            type="submit"
+            aria-label="Sign In"
+            disabled={isLoading}
+          >
+            {isLoading ? "Signing In..." : "Sign In"}
           </button>
         </form>
         <div className="login-divider">
@@ -166,30 +265,35 @@ const Login = () => {
           className="login-google-btn"
           onClick={logInWithGoogle}
           aria-label="Sign in with Google"
+          disabled={isLoading}
         >
           <img
             src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-            alt=""
+            alt="Google logo"
             className="login-google-icon"
+            width="20"
+            height="20"
           />
-          Google Account
+          {isLoading ? "Loading..." : "Google Account"}
         </button>
         <div className="login-bottom">
           Don't have an account?{" "}
           <span
             className="login-create-link"
             onClick={createAccount}
+            onKeyDown={(e) => handleKeyDown(e, createAccount)}
             role="button"
-            tabIndex="0"
+            tabIndex={0}
+            aria-label="Create Account"
           >
             Create Account
           </span>
         </div>
-      </div>
+      </main>
       <footer className="login-footer">
-        <a href="#">Need Help?</a>
-        <a href="#">Privacy Policy</a>
-        <a href="#">Terms of Service</a>
+        <a href="/help">Need Help?</a>
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Service</a>
       </footer>
     </div>
   );
