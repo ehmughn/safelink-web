@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, googleProvider, db } from "../config/firebase";
-import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  signInWithPopup,
+} from "firebase/auth";
 import { setDoc, doc } from "firebase/firestore";
 import "../styles/CreateAccount.css";
 import BrandLogo from "../components/BrandLogo";
@@ -19,10 +23,12 @@ const CreateAccount = () => {
   const [birthdate, setBirthdate] = useState("");
   const [role, setRole] = useState("family_member");
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [accountCreated, setAccountCreated] = useState(false);
   const navigate = useNavigate();
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -56,11 +62,13 @@ const CreateAccount = () => {
     setter(value);
     setFieldErrors((prev) => ({ ...prev, [field]: "" }));
     setError("");
+    setSuccessMessage("");
   };
 
   const createAccount = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccessMessage("");
     setIsLoading(true);
 
     if (!validateForm()) {
@@ -75,6 +83,13 @@ const CreateAccount = () => {
         email,
         password
       );
+
+      // Send email verification
+      await sendEmailVerification(result.user, {
+        url: window.location.origin + "/verify-email",
+        handleCodeInApp: true,
+      });
+
       const authInfo = {
         userId: result.user.uid,
         email: email,
@@ -90,11 +105,17 @@ const CreateAccount = () => {
           role: role,
         },
         profilePhoto: "",
-        isAuth: true,
+        isAuth: false, // Set to false until email is verified
+        emailVerified: false,
       };
       localStorage.setItem("auth", JSON.stringify(authInfo));
       await setDoc(doc(db, "users", result.user.uid), authInfo);
-      navigate("/");
+
+      setSuccessMessage(
+        "A verification email has been sent to your email address. Please verify your email to continue."
+      );
+      setAccountCreated(true);
+      setIsLoading(false);
     } catch (error) {
       if (error.code === "auth/email-already-in-use") {
         setError("This email is already registered.");
@@ -105,13 +126,13 @@ const CreateAccount = () => {
       } else {
         setError("Failed to create account. Please try again.");
       }
-    } finally {
       setIsLoading(false);
     }
   };
 
   const createAccountWithGoogle = async () => {
     setError("");
+    setSuccessMessage("");
     setIsLoading(true);
 
     try {
@@ -139,11 +160,11 @@ const CreateAccount = () => {
           role: "family_member",
         },
         profilePhoto: user.photoURL || "",
-        isAuth: true,
+        isAuth: user.emailVerified, // Set based on email verification status
+        emailVerified: user.emailVerified,
       };
       localStorage.setItem("auth", JSON.stringify(authInfo));
 
-      // Only setDoc if user does not exist in Firestore
       try {
         const { doc, getDoc, setDoc } = await import("firebase/firestore");
         const { db } = await import("../config/firebase");
@@ -153,11 +174,17 @@ const CreateAccount = () => {
           await setDoc(userDocRef, authInfo);
         }
       } catch (firestoreError) {
-        // Optionally handle Firestore error
         console.error("Firestore error:", firestoreError);
       }
 
-      navigate("/");
+      if (user.emailVerified) {
+        setSuccessMessage("Account created successfully!");
+      } else {
+        setSuccessMessage(
+          "A verification email has been sent to your email address. Please verify your email to continue."
+        );
+      }
+      setAccountCreated(true);
     } catch (error) {
       if (error.code === "auth/popup-closed-by-user") {
         setError("Google sign-up was cancelled.");
@@ -166,7 +193,6 @@ const CreateAccount = () => {
       } else {
         setError("Failed to sign up with Google. Please try again.");
       }
-    } finally {
       setIsLoading(false);
     }
   };
@@ -206,315 +232,370 @@ const CreateAccount = () => {
         </button>
         <h1 className="create-title">Create Account</h1>
         <p className="create-desc">Join SafeLink to protect your family</p>
-        <form className="create-form" onSubmit={createAccount}>
-          <div className="create-form-grid">
-            <div className="create-input-div">
-              <label htmlFor="firstName">First Name</label>
-              <input
-                id="firstName"
-                type="text"
-                placeholder="Enter your first name"
-                value={firstName}
-                onChange={(e) =>
-                  handleInputChange("firstName", e.target.value, setFirstName)
-                }
-                onFocus={() => setError("")}
-                aria-required="true"
-                aria-invalid={!!fieldErrors.firstName}
-                aria-describedby={
-                  fieldErrors.firstName ? "firstName-error" : undefined
-                }
-              />
-              {fieldErrors.firstName && (
-                <span
-                  id="firstName-error"
-                  className="create-input-error"
-                  role="alert"
-                >
-                  {fieldErrors.firstName}
-                </span>
-              )}
-            </div>
-            <div className="create-input-div">
-              <label htmlFor="lastName">Last Name</label>
-              <input
-                id="lastName"
-                type="text"
-                placeholder="Enter your last name"
-                value={lastName}
-                onChange={(e) =>
-                  handleInputChange("lastName", e.target.value, setLastName)
-                }
-                onFocus={() => setError("")}
-                aria-required="true"
-                aria-invalid={!!fieldErrors.lastName}
-                aria-describedby={
-                  fieldErrors.lastName ? "lastName-error" : undefined
-                }
-              />
-              {fieldErrors.lastName && (
-                <span
-                  id="lastName-error"
-                  className="create-input-error"
-                  role="alert"
-                >
-                  {fieldErrors.lastName}
-                </span>
-              )}
-            </div>
-            <div className="create-input-div">
-              <label htmlFor="email">Email Address</label>
-              <input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) =>
-                  handleInputChange("email", e.target.value, setEmail)
-                }
-                onFocus={() => setError("")}
-                aria-required="true"
-                aria-invalid={!!fieldErrors.email}
-                aria-describedby={fieldErrors.email ? "email-error" : undefined}
-              />
-              {fieldErrors.email && (
-                <span
-                  id="email-error"
-                  className="create-input-error"
-                  role="alert"
-                >
-                  {fieldErrors.email}
-                </span>
-              )}
-            </div>
-            <div className="create-input-div">
-              <label htmlFor="phoneNumber">Phone Number</label>
-              <input
-                id="phoneNumber"
-                type="tel"
-                placeholder="Enter your phone number"
-                value={phoneNumber}
-                onChange={(e) =>
-                  handleInputChange(
-                    "phoneNumber",
-                    e.target.value,
-                    setPhoneNumber
-                  )
-                }
-                onFocus={() => setError("")}
-                aria-required="true"
-                aria-invalid={!!fieldErrors.phoneNumber}
-                aria-describedby={
-                  fieldErrors.phoneNumber ? "phoneNumber-error" : undefined
-                }
-              />
-              {fieldErrors.phoneNumber && (
-                <span
-                  id="phoneNumber-error"
-                  className="create-input-error"
-                  role="alert"
-                >
-                  {fieldErrors.phoneNumber}
-                </span>
-              )}
-            </div>
-            <div className="create-input-div">
-              <label htmlFor="address">Address</label>
-              <input
-                id="address"
-                type="text"
-                placeholder="Enter your address"
-                value={address}
-                onChange={(e) =>
-                  handleInputChange("address", e.target.value, setAddress)
-                }
-                onFocus={() => setError("")}
-                aria-required="true"
-                aria-invalid={!!fieldErrors.address}
-                aria-describedby={
-                  fieldErrors.address ? "address-error" : undefined
-                }
-              />
-              {fieldErrors.address && (
-                <span
-                  id="address-error"
-                  className="create-input-error"
-                  role="alert"
-                >
-                  {fieldErrors.address}
-                </span>
-              )}
-            </div>
-            <div className="create-input-div">
-              <label htmlFor="birthdate">Birthdate</label>
-              <input
-                id="birthdate"
-                type="date"
-                placeholder="Enter your birthdate"
-                value={birthdate}
-                onChange={(e) =>
-                  handleInputChange("birthdate", e.target.value, setBirthdate)
-                }
-                onFocus={() => setError("")}
-                aria-required="true"
-                aria-invalid={!!fieldErrors.birthdate}
-                aria-describedby={
-                  fieldErrors.birthdate ? "birthdate-error" : undefined
-                }
-              />
-              {fieldErrors.birthdate && (
-                <span
-                  id="birthdate-error"
-                  className="create-input-error"
-                  role="alert"
-                >
-                  {fieldErrors.birthdate}
-                </span>
-              )}
-            </div>
-            <div className="create-input-div">
-              <label htmlFor="password">Password</label>
-              <div className="create-password-wrapper">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) =>
-                    handleInputChange("password", e.target.value, setPassword)
-                  }
-                  onFocus={() => setError("")}
-                  aria-required="true"
-                  aria-invalid={!!fieldErrors.password}
-                  aria-describedby={
-                    fieldErrors.password ? "password-error" : undefined
-                  }
-                />
-                <button
-                  type="button"
-                  className="create-toggle-password"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-              {fieldErrors.password && (
-                <span
-                  id="password-error"
-                  className="create-input-error"
-                  role="alert"
-                >
-                  {fieldErrors.password}
-                </span>
-              )}
-            </div>
-            <div className="create-input-div">
-              <label htmlFor="confirm-password">Confirm Password</label>
-              <div className="create-password-wrapper">
-                <input
-                  id="confirm-password"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "confirmPassword",
-                      e.target.value,
-                      setConfirmPassword
-                    )
-                  }
-                  onFocus={() => setError("")}
-                  aria-required="true"
-                  aria-invalid={!!fieldErrors.confirmPassword}
-                  aria-describedby={
-                    fieldErrors.confirmPassword
-                      ? "confirm-password-error"
-                      : undefined
-                  }
-                />
-                <button
-                  type="button"
-                  className="create-toggle-password"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  aria-label={
-                    showConfirmPassword
-                      ? "Hide confirm password"
-                      : "Show confirm password"
-                  }
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff size={20} />
-                  ) : (
-                    <Eye size={20} />
-                  )}
-                </button>
-              </div>
-              {fieldErrors.confirmPassword && (
-                <span
-                  id="confirm-password-error"
-                  className="create-input-error"
-                  role="alert"
-                >
-                  {fieldErrors.confirmPassword}
-                </span>
-              )}
-            </div>
-            <div className="create-input-div create-role-div">
-              <label htmlFor="role">Role</label>
-              <select
-                id="role"
-                value={role}
-                onChange={(e) =>
-                  handleInputChange("role", e.target.value, setRole)
-                }
-                onFocus={() => setError("")}
-                aria-required="true"
-              >
-                <option value="family_member">Family Member</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
+        {successMessage && (
+          <div className="create-success" role="alert">
+            <span className="create-success-icon">✔</span>
+            {successMessage}
           </div>
-          {error && (
-            <div className="create-error" role="alert">
-              <img
-                src={AlertIcon}
-                alt="Error icon"
-                className="create-error-icon"
-                width="16"
-                height="16"
-              />
-              {error}
+        )}
+        {!accountCreated && (
+          <>
+            <form className="create-form" onSubmit={createAccount}>
+              <div className="create-form-grid">
+                <div className="create-input-div">
+                  <label htmlFor="firstName">First Name</label>
+                  <input
+                    id="firstName"
+                    type="text"
+                    placeholder="Enter your first name"
+                    value={firstName}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "firstName",
+                        e.target.value,
+                        setFirstName
+                      )
+                    }
+                    onFocus={() => {
+                      setError("");
+                      setSuccessMessage("");
+                    }}
+                    aria-required="true"
+                    aria-invalid={!!fieldErrors.firstName}
+                    aria-describedby={
+                      fieldErrors.firstName ? "firstName-error" : undefined
+                    }
+                  />
+                  {fieldErrors.firstName && (
+                    <span
+                      id="firstName-error"
+                      className="create-input-error"
+                      role="alert"
+                    >
+                      {fieldErrors.firstName}
+                    </span>
+                  )}
+                </div>
+                <div className="create-input-div">
+                  <label htmlFor="lastName">Last Name</label>
+                  <input
+                    id="lastName"
+                    type="text"
+                    placeholder="Enter your last name"
+                    value={lastName}
+                    onChange={(e) =>
+                      handleInputChange("lastName", e.target.value, setLastName)
+                    }
+                    onFocus={() => {
+                      setError("");
+                      setSuccessMessage("");
+                    }}
+                    aria-required="true"
+                    aria-invalid={!!fieldErrors.lastName}
+                    aria-describedby={
+                      fieldErrors.lastName ? "lastName-error" : undefined
+                    }
+                  />
+                  {fieldErrors.lastName && (
+                    <span
+                      id="lastName-error"
+                      className="create-input-error"
+                      role="alert"
+                    >
+                      {fieldErrors.lastName}
+                    </span>
+                  )}
+                </div>
+                <div className="create-input-div">
+                  <label htmlFor="email">Email Address</label>
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) =>
+                      handleInputChange("email", e.target.value, setEmail)
+                    }
+                    onFocus={() => {
+                      setError("");
+                      setSuccessMessage("");
+                    }}
+                    aria-required="true"
+                    aria-invalid={!!fieldErrors.email}
+                    aria-describedby={
+                      fieldErrors.email ? "email-error" : undefined
+                    }
+                  />
+                  {fieldErrors.email && (
+                    <span
+                      id="email-error"
+                      className="create-input-error"
+                      role="alert"
+                    >
+                      {fieldErrors.email}
+                    </span>
+                  )}
+                </div>
+                <div className="create-input-div">
+                  <label htmlFor="phoneNumber">Phone Number</label>
+                  <input
+                    id="phoneNumber"
+                    type="tel"
+                    placeholder="Enter your phone number"
+                    value={phoneNumber}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "phoneNumber",
+                        e.target.value,
+                        setPhoneNumber
+                      )
+                    }
+                    onFocus={() => {
+                      setError("");
+                      setSuccessMessage("");
+                    }}
+                    aria-required="true"
+                    aria-invalid={!!fieldErrors.phoneNumber}
+                    aria-describedby={
+                      fieldErrors.phoneNumber ? "phoneNumber-error" : undefined
+                    }
+                  />
+                  {fieldErrors.phoneNumber && (
+                    <span
+                      id="phoneNumber-error"
+                      className="create-input-error"
+                      role="alert"
+                    >
+                      {fieldErrors.phoneNumber}
+                    </span>
+                  )}
+                </div>
+                <div className="create-input-div">
+                  <label htmlFor="address">Address</label>
+                  <input
+                    id="address"
+                    type="text"
+                    placeholder="Enter your address"
+                    value={address}
+                    onChange={(e) =>
+                      handleInputChange("address", e.target.value, setAddress)
+                    }
+                    onFocus={() => {
+                      setError("");
+                      setSuccessMessage("");
+                    }}
+                    aria-required="true"
+                    aria-invalid={!!fieldErrors.address}
+                    aria-describedby={
+                      fieldErrors.address ? "address-error" : undefined
+                    }
+                  />
+                  {fieldErrors.address && (
+                    <span
+                      id="address-error"
+                      className="create-input-error"
+                      role="alert"
+                    >
+                      {fieldErrors.address}
+                    </span>
+                  )}
+                </div>
+                <div className="create-input-div">
+                  <label htmlFor="birthdate">Birthdate</label>
+                  <input
+                    id="birthdate"
+                    type="date"
+                    placeholder="Enter your birthdate"
+                    value={birthdate}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "birthdate",
+                        e.target.value,
+                        setBirthdate
+                      )
+                    }
+                    onFocus={() => {
+                      setError("");
+                      setSuccessMessage("");
+                    }}
+                    aria-required="true"
+                    aria-invalid={!!fieldErrors.birthdate}
+                    aria-describedby={
+                      fieldErrors.birthdate ? "birthdate-error" : undefined
+                    }
+                  />
+                  {fieldErrors.birthdate && (
+                    <span
+                      id="birthdate-error"
+                      className="create-input-error"
+                      role="alert"
+                    >
+                      {fieldErrors.birthdate}
+                    </span>
+                  )}
+                </div>
+                <div className="create-input-div">
+                  <label htmlFor="password">Password</label>
+                  <div className="create-password-wrapper">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "password",
+                          e.target.value,
+                          setPassword
+                        )
+                      }
+                      onFocus={() => {
+                        setError("");
+                        setSuccessMessage("");
+                      }}
+                      aria-required="true"
+                      aria-invalid={!!fieldErrors.password}
+                      aria-describedby={
+                        fieldErrors.password ? "password-error" : undefined
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="create-toggle-password"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
+                  {fieldErrors.password && (
+                    <span
+                      id="password-error"
+                      className="create-input-error"
+                      role="alert"
+                    >
+                      {fieldErrors.password}
+                    </span>
+                  )}
+                </div>
+                <div className="create-input-div">
+                  <label htmlFor="confirm-password">Confirm Password</label>
+                  <div className="create-password-wrapper">
+                    <input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm your password"
+                      value={confirmPassword}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "confirmPassword",
+                          e.target.value,
+                          setConfirmPassword
+                        )
+                      }
+                      onFocus={() => {
+                        setError("");
+                        setSuccessMessage("");
+                      }}
+                      aria-required="true"
+                      aria-invalid={!!fieldErrors.confirmPassword}
+                      aria-describedby={
+                        fieldErrors.confirmPassword
+                          ? "confirm-password-error"
+                          : undefined
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="create-toggle-password"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      aria-label={
+                        showConfirmPassword
+                          ? "Hide confirm password"
+                          : "Show confirm password"
+                      }
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff size={20} />
+                      ) : (
+                        <Eye size={20} />
+                      )}
+                    </button>
+                  </div>
+                  {fieldErrors.confirmPassword && (
+                    <span
+                      id="confirm-password-error"
+                      className="create-input-error"
+                      role="alert"
+                    >
+                      {fieldErrors.confirmPassword}
+                    </span>
+                  )}
+                </div>
+                <div className="create-input-div create-role-div">
+                  <label htmlFor="role">Role</label>
+                  <select
+                    id="role"
+                    value={role}
+                    onChange={(e) =>
+                      handleInputChange("role", e.target.value, setRole)
+                    }
+                    onFocus={() => {
+                      setError("");
+                      setSuccessMessage("");
+                    }}
+                    aria-required="true"
+                  >
+                    <option value="family_member">Family Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              </div>
+              {error && (
+                <div className="create-error" role="alert">
+                  <img
+                    src={AlertIcon}
+                    alt="Error icon"
+                    className="create-error-icon"
+                    width="16"
+                    height="16"
+                  />
+                  {error}
+                </div>
+              )}
+              <button
+                className="create-btn"
+                type="submit"
+                aria-label="Create Account"
+                disabled={isLoading}
+              >
+                {isLoading ? "Creating Account..." : "Create Account"}
+              </button>
+            </form>
+            <div className="create-divider">
+              <span>or Sign up with</span>
             </div>
-          )}
-          <button
-            className="create-btn"
-            type="submit"
-            aria-label="Create Account"
-            disabled={isLoading}
-          >
-            {isLoading ? "Creating Account..." : "Create Account"}
-          </button>
-        </form>
-        <div className="create-divider">
-          <span>or Sign up with</span>
-        </div>
-        <button
-          className="create-google-btn"
-          onClick={createAccountWithGoogle}
-          aria-label="Sign up with Google"
-          disabled={isLoading}
-        >
-          <img
-            src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-            alt="Google logo"
-            className="create-google-icon"
-            width="24"
-            height="24"
-          />
-          {isLoading ? "Loading..." : "Google Account"}
-        </button>
+            <button
+              className="create-google-btn"
+              onClick={createAccountWithGoogle}
+              aria-label="Sign up with Google"
+              disabled={isLoading}
+            >
+              <img
+                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                alt="Google logo"
+                className="create-google-icon"
+                width="24"
+                height="24"
+              />
+              {isLoading ? "Loading..." : "Google Account"}
+            </button>
+          </>
+        )}
         <div className="create-bottom">
           Already have an account?{" "}
           <span

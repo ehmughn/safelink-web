@@ -57,6 +57,11 @@ const Login = () => {
 
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
+      if (!result.user.emailVerified) {
+        setError("Please verify your email before logging in.");
+        setIsLoading(false);
+        return;
+      }
       const authInfo = {
         userId: result.user.uid,
         name: result.user.displayName,
@@ -65,7 +70,7 @@ const Login = () => {
         isAuth: true,
       };
       localStorage.setItem("auth", JSON.stringify(authInfo));
-      navigate("/home");
+      navigate("/");
     } catch (error) {
       if (error.code === "auth/user-not-found") {
         setError("No account found with this email.");

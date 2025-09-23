@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import CreateAccount from "./pages/CreateAccount";
 import Family from "./pages/Family";
 import ForgotPassword from "./pages/ForgotPassword";
+import VerifyEmail from "./pages/VerifyEmail";
 import { auth } from "./config/firebase";
 
 function App() {
@@ -13,7 +14,11 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-      setUser(firebaseUser);
+      if (firebaseUser && firebaseUser.emailVerified) {
+        setUser(firebaseUser);
+      } else {
+        setUser(null);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -26,6 +31,10 @@ function App() {
         <Route
           path="/create-account"
           element={user ? <Navigate to="/" /> : <CreateAccount />}
+        />
+        <Route
+          path="/verify-email"
+          element={user ? <Navigate to="/" /> : <VerifyEmail />}
         />
         <Route path="/family" element={<Family />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
