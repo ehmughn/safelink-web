@@ -59,7 +59,7 @@ const Header = (props) => {
         ☰
       </button>
       <nav className={`home-nav ${isNavOpen ? "open" : ""}`} role="navigation">
-        <a href="#" aria-current="page">
+        <a href="../" aria-current="page">
           Dashboard
         </a>
         <a href="/alerts" onClick={() => navigate("/alerts")}>
