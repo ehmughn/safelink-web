@@ -463,9 +463,10 @@
 
 .lp-how-steps {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
+  flex-wrap: nowrap;
   justify-content: center;
-  align-items: center;
+  align-items: stretch;
   gap: 2rem;
   max-width: 1200px;
   margin: 0 auto;
@@ -516,6 +517,10 @@
   font-size: 1.75rem;
   color: var(--primary);
   margin: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
 }
 
 /* Testimonial Section */
@@ -643,20 +648,18 @@
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-  .lp-hero {
+  .lp-how-steps {
     flex-direction: column;
-    text-align: center;
-    padding: 5rem 2rem;
+    flex-wrap: wrap;
+    gap: 2.5rem;
   }
 
-  .lp-hero-position,
-  .lp-hero-img {
-    max-width: 100%;
+  .lp-how-arrow {
+    transform: rotate(90deg);
   }
 
-  .lp-hero-content {
-    max-width: 100%;
-    margin: 0 0 3rem;
+  .lp-section-title {
+    font-size: 2rem;
   }
 
   .lp-hero-content h1 {

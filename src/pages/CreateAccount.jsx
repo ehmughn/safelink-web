@@ -97,6 +97,7 @@ const CreateAccount = () => {
         createdAt: new Date().toLocaleString("en-US", {
           timeZone: "Asia/Manila",
         }),
+        displayName: firstName + " " + lastName,
         profile: {
           address: address,
           birthdate: birthdate,
@@ -577,7 +578,7 @@ const CreateAccount = () => {
               </button>
             </form>
             <div className="create-divider">
-              <span>or Sign up with</span>
+              <span>or Create Account with</span>
             </div>
             <button
               className="create-google-btn"
@@ -606,7 +607,7 @@ const CreateAccount = () => {
             tabIndex={0}
             aria-label="Sign In"
           >
-            Sign In
+            Log in
           </span>
         </div>
       </main>

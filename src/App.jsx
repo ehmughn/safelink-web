@@ -7,6 +7,7 @@ import CreateAccount from "./pages/CreateAccount";
 import Family from "./pages/Family";
 import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
+import Account from "./pages/Account";
 import { auth } from "./config/firebase";
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
         />
         <Route path="/family" element={<Family />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/account" element={<Account />} />
       </Routes>
     </>
   );

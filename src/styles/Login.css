@@ -1,3 +1,26 @@
+.login-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-toggle-password {
+  position: absolute;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.login-toggle-password:hover,
+.login-toggle-password:focus {
+  color: var(--primary);
+}
+.login-toggle-password:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
 :root {
   --primary: #e63946;
   --secondary: #f4a261;

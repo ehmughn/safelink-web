@@ -50,6 +50,9 @@ const ForgotPassword = () => {
     try {
       await sendPasswordResetEmail(auth, email);
       setMessage("Password reset email sent! Please check your inbox.");
+      setTimeout(() => {
+        navigate("/login");
+      }, 3000);
     } catch (err) {
       if (err.code === "auth/user-not-found") {
         setError("No account found with this email.");

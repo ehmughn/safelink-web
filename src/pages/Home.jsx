@@ -1,32 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { auth } from "../config/firebase";
-import { signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../config/firebase";
 import {
   Bell,
   Users,
   MapPin,
   CheckCircle,
   AlertTriangle,
-  Volume2,
+  X,
+  ChevronDown,
 } from "lucide-react";
 import { MapContainer, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import "../styles/Home.css";
-import BrandLogo from "../components/BrandLogo";
 import ImSafeButton from "../components/ImSafeButton";
 import FamilyStatusCard from "../components/FamilyStatusCard";
+import Header from "../components/Header";
 import { FamilyService } from "../services/familyService";
 import { SafeStatusService } from "../services/safeStatusService";
-
-// TEMPORARY
-const familyMembers = [
-  { name: "Thomas", status: "SAFE", avatar: null },
-  { name: "Kari", status: "NO RESPONSE", avatar: null },
-  { name: "Martha", status: "UNKNOWN", avatar: null },
-  { name: "Maine", status: "DANGER", avatar: null },
-];
+import { useNavigate } from "react-router-dom";
 
 const Home = () => {
+  const navigate = useNavigate();
   const [alerts, setAlerts] = useState([
     {
       id: 1,
@@ -35,41 +31,77 @@ const Home = () => {
     },
     { id: 2, text: "Earthquake alert", severity: "medium" },
   ]);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isNavOpen, setIsNavOpen] = useState(false);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [familyCode, setFamilyCode] = useState(null);
   const [user, setUser] = useState(null);
   const [familyLoading, setFamilyLoading] = useState(true);
+  const [profileData, setProfileData] = useState({
+    profile: { firstName: "", lastName: "", address: "" },
+    email: "",
+    phoneNumber: "",
+  });
+  const [checklist, setChecklist] = useState({
+    food: false,
+    water: false,
+    clothes: false,
+    flashlight: false,
+  });
 
-  // Load user and family data on component mount
+  const dropdownRef = useRef(null);
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
+        try {
+          const userDocRef = doc(db, "users", firebaseUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            setProfileData({
+              profile: {
+                firstName: userData.profile?.firstName || "",
+                lastName: userData.profile?.lastName || "",
+                address: userData.profile?.address || "",
+              },
+              email: userData.email || "",
+              phoneNumber:
+                userData.phoneNumber || firebaseUser.phoneNumber || "",
+            });
+          }
+        } catch (error) {
+          setError("Failed to fetch user data.");
+          console.error("Error fetching user document:", error);
+        }
         await loadFamilyData(firebaseUser.uid);
       } else {
         setUser(null);
         setFamilyCode(null);
         setFamilyMembers([]);
         setFamilyLoading(false);
+        navigate("/login");
       }
     });
-
     return () => unsubscribe();
+  }, [navigate]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Load family data for current user
   const loadFamilyData = async (userId) => {
     setFamilyLoading(true);
     try {
       const familyResult = await FamilyService.getUserFamilyCode(userId);
-
       if (familyResult.success && familyResult.familyCode) {
         setFamilyCode(familyResult.familyCode);
-
-        // Subscribe to family updates for real-time data
         const unsubscribe = FamilyService.subscribeFamilyUpdates(
           familyResult.familyCode,
           (result) => {
@@ -79,8 +111,6 @@ const Home = () => {
             setFamilyLoading(false);
           }
         );
-
-        // Store unsubscribe function for cleanup
         return unsubscribe;
       } else {
         setFamilyCode(null);
@@ -88,176 +118,172 @@ const Home = () => {
         setFamilyLoading(false);
       }
     } catch (error) {
+      setError("Failed to load family data.");
       console.error("Error loading family data:", error);
       setFamilyLoading(false);
     }
   };
 
-  // Handle "I'm Safe" button click
   const handleSafeUpdate = async (location = null) => {
     if (!user) {
       return { success: false, error: "User not authenticated" };
     }
-
     try {
       const result = await SafeStatusService.recordSafeStatus(
         user.uid,
         location,
         "Manual check-in from home dashboard"
       );
-
       if (result.success) {
-        // Show success feedback (you could add a toast notification here)
-        console.log("Safe status updated successfully");
+        setAlerts((prev) => [
+          ...prev,
+          { id: Date.now(), text: "Safe status updated!", severity: "low" },
+        ]);
       }
-
       return result;
     } catch (error) {
       console.error("Error updating safe status:", error);
+      setError("Failed to update safe status.");
       return { success: false, error: error.message };
     }
   };
 
-  // Handle family check-in request
   const handleFamilyCheckIn = async () => {
     if (!user || !familyCode) return;
-
     try {
       const result = await FamilyService.sendFamilyCheckIn(
         familyCode,
         user.uid,
         user.displayName || user.email
       );
-
       if (result.success) {
-        // Show success message (you could add a toast notification here)
-        console.log("Family check-in request sent successfully");
+        setAlerts((prev) => [
+          ...prev,
+          { id: Date.now(), text: "Family check-in sent!", severity: "low" },
+        ]);
       }
     } catch (error) {
       console.error("Error sending family check-in:", error);
+      setError("Failed to send family check-in.");
     }
   };
 
-  // Handle SOS alert
   const handleSOSAlert = async () => {
     if (!user) return;
-
     try {
-      // Get current location if possible
       const locationResult = await SafeStatusService.getCurrentLocation();
       const location = locationResult.success ? locationResult.location : null;
-
       const result = await SafeStatusService.sendSOSAlert(
         user.uid,
         location,
         "Emergency SOS alert from home dashboard"
       );
-
       if (result.success) {
-        console.log("SOS alert sent successfully");
+        setAlerts((prev) => [
+          ...prev,
+          { id: Date.now(), text: "SOS alert sent!", severity: "high" },
+        ]);
       }
     } catch (error) {
       console.error("Error sending SOS alert:", error);
+      setError("Failed to send SOS alert.");
     }
   };
 
-  // Handle family member click
-  const handleMemberClick = (member) => {
-    // Navigate to member details or show more info
-    console.log("Member clicked:", member);
+  const handleChecklistChange = (item) => {
+    setChecklist((prev) => ({ ...prev, [item]: !prev[item] }));
   };
 
-  const logOut = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await signOut(auth);
-    } catch (error) {
-      setError("Failed to log out. Please try again.");
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSaveChecklist = () => {
+    setAlerts((prev) => [
+      ...prev,
+      { id: Date.now(), text: "Go-Bag checklist saved!", severity: "low" },
+    ]);
+    console.log("Checklist saved:", checklist);
   };
 
-  const toggleNav = () => {
-    setIsNavOpen(!isNavOpen);
+  const dismissAlert = (id) => {
+    setAlerts((prev) => prev.filter((alert) => alert.id !== id));
   };
 
   return (
     <div className="home-root">
-      {/* Header */}
-      <header className="home-header" role="banner">
-        <div className="home-header-left">
-          <BrandLogo safe="white" link="white" />
-          <span className="home-language-toggle">EN | FIL</span>
-        </div>
-        <button
-          className="home-nav-toggle"
-          onClick={toggleNav}
-          aria-label="Toggle navigation menu"
-          aria-expanded={isNavOpen}
-        >
-          ☰
-        </button>
-        <nav
-          className={`home-nav ${isNavOpen ? "open" : ""}`}
-          role="navigation"
-        >
-          <a href="#" aria-current="page">
-            Dashboard
-          </a>
-          <a href="#">Alerts</a>
-          <a href="#">Family</a>
-          <a href="#">Evacuation</a>
-          <a href="#">Go-Bag</a>
-          <a href="#">Settings</a>
-        </nav>
-        <div className="home-avatar" role="img" aria-label="User profile">
-          <span>Maria</span>
-        </div>
-      </header>
+      <Header profileData={profileData} />
 
-      {/* Welcome */}
       <section className="home-welcome-block" aria-labelledby="welcome-heading">
         <h1 id="welcome-heading" className="home-welcome">
           DISASTER PREPAREDNESS
         </h1>
       </section>
 
-      {/* Dashboard Grid */}
       <div className="home-dashboard" role="grid">
-        {/* Alerts Section */}
         <section className="home-alerts" aria-labelledby="alerts-title">
           <h2 id="alerts-title" className="home-section-title">
             ALERTS
           </h2>
-          <div className="home-alert-message">{alerts[0].text}</div>
-          <ImSafeButton onSafeUpdate={handleSafeUpdate} size="normal" />
+          {alerts.length > 0 ? (
+            alerts.map((alert) => (
+              <div
+                key={alert.id}
+                className={`home-alert-message ${alert.severity}`}
+              >
+                <span>{alert.text}</span>
+                <button
+                  className="home-alert-dismiss"
+                  onClick={() => dismissAlert(alert.id)}
+                  aria-label="Dismiss alert"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="home-alert-message low">
+              No active alerts at this time.
+            </div>
+          )}
+          <div className="home-alert-actions">
+            <ImSafeButton onSafeUpdate={handleSafeUpdate} size="normal" />
+            <button
+              className="home-action-btn home-view-alerts"
+              onClick={() => navigate("/alerts")}
+              aria-label="View all alerts"
+            >
+              View All Alerts
+            </button>
+          </div>
         </section>
 
-        {/* Family Status */}
         <section
           className="home-family"
           aria-labelledby="family-title"
           style={{ cursor: "pointer" }}
-          onClick={() => window.location.assign("/family")}
+          onClick={() => navigate("/family")}
         >
-          <FamilyStatusCard
-            familyMembers={familyMembers}
-            onRequestCheckIn={handleFamilyCheckIn}
-            onMemberClick={handleMemberClick}
-            isLoading={familyLoading}
-            showCheckInButton={true}
-          />
+          <h2 id="family-title" className="home-section-title">
+            FAMILY STATUS
+          </h2>
+          {familyLoading ? (
+            <div className="home-loading">Loading family data...</div>
+          ) : (
+            <FamilyStatusCard
+              familyMembers={familyMembers}
+              onRequestCheckIn={handleFamilyCheckIn}
+              isLoading={familyLoading}
+              showCheckInButton={true}
+            />
+          )}
         </section>
 
-        {/* Evacuation Map */}
         <section className="home-evacuation" aria-labelledby="evacuation-title">
           <h2 id="evacuation-title" className="home-section-title">
             Nearest Evacuation Center
           </h2>
-          <MapContainer center={[14.5547, 121.0244]} zoom={13}>
+          <MapContainer
+            center={[14.5547, 121.0244]}
+            zoom={13}
+            className="home-map-interactive"
+          >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -265,32 +291,34 @@ const Home = () => {
           </MapContainer>
         </section>
 
-        {/* Go-Bag Checklist */}
         <section className="home-gobag" aria-labelledby="gobag-title">
           <h2 id="gobag-title" className="home-section-title">
             Go-Bag Checklist
           </h2>
           <form className="home-gobag-checklist">
-            <label className="home-gobag-item">
-              <input type="checkbox" />
-              <span className="home-gobag-label">Food</span>
-            </label>
-            <label className="home-gobag-item">
-              <input type="checkbox" />
-              <span className="home-gobag-label">Water</span>
-            </label>
-            <label className="home-gobag-item">
-              <input type="checkbox" />
-              <span className="home-gobag-label">Clothes</span>
-            </label>
-            <label className="home-gobag-item">
-              <input type="checkbox" />
-              <span className="home-gobag-label">Flashlight</span>
-            </label>
+            {["food", "water", "clothes", "flashlight"].map((item) => (
+              <label key={item} className="home-gobag-item">
+                <input
+                  type="checkbox"
+                  checked={checklist[item]}
+                  onChange={() => handleChecklistChange(item)}
+                />
+                <span className="home-gobag-label">
+                  {item.charAt(0).toUpperCase() + item.slice(1)}
+                </span>
+              </label>
+            ))}
+            <button
+              type="button"
+              className="home-action-btn home-save-checklist"
+              onClick={handleSaveChecklist}
+              aria-label="Save go-bag checklist"
+            >
+              Save Checklist
+            </button>
           </form>
         </section>
 
-        {/* Latest Alerts */}
         <section
           className="home-latest-alerts"
           aria-labelledby="latest-alerts-title"
@@ -300,7 +328,10 @@ const Home = () => {
           </h2>
           <div className="home-latest-alerts-list">
             {alerts.map((alert) => (
-              <div key={alert.id} className="home-latest-alert-item">
+              <div
+                key={alert.id}
+                className={`home-latest-alert-item ${alert.severity}`}
+              >
                 {alert.text}{" "}
                 <span className="home-alert-time">
                   {alert.severity === "high" ? "1 hour ago" : "RHI/VOLCS ago"}
@@ -310,7 +341,6 @@ const Home = () => {
           </div>
         </section>
 
-        {/* Official Announcements */}
         <section
           className="home-announcements"
           aria-labelledby="announcements-title"
@@ -327,7 +357,6 @@ const Home = () => {
         </section>
       </div>
 
-      {/* Action Buttons */}
       <section className="home-actions-group" aria-label="Action buttons">
         <div className="home-actions">
           <button
@@ -346,7 +375,7 @@ const Home = () => {
             <Users
               className="home-action-icon"
               aria-label="Family Icon"
-              size={24}
+              size={20}
               color="white"
             />
             Family Check-In
@@ -358,7 +387,7 @@ const Home = () => {
             <MapPin
               className="home-action-icon"
               aria-label="Location Icon"
-              size={24}
+              size={20}
               color="white"
             />
             Find Location
@@ -370,7 +399,7 @@ const Home = () => {
             <CheckCircle
               className="home-action-icon"
               aria-label="Go-Bag Icon"
-              size={24}
+              size={20}
               color="white"
             />
             Edit Go-Bag
@@ -378,22 +407,12 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Log out button */}
-      <div className="home-logout-row">
-        {error && (
-          <p className="home-error" role="alert">
-            {error}
-          </p>
-        )}
-        <button
-          className="home-logout-btn"
-          onClick={logOut}
-          disabled={isLoading}
-          aria-label="Log out"
-        >
-          {isLoading ? "Logging out..." : "Sign Out"}
-        </button>
-      </div>
+      {error && (
+        <div className="home-error" role="alert">
+          <AlertTriangle size={16} />
+          <span>{error}</span>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import { auth, googleProvider } from "../config/firebase";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "../styles/Login.css";
 import BrandLogo from "../components/BrandLogo";
@@ -13,6 +14,7 @@ const Login = () => {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const validateEmail = (email) => {
@@ -183,7 +185,7 @@ const Login = () => {
         >
           ←
         </button>
-        <h1 className="login-title">Sign In</h1>
+        <h1 className="login-title">Log in</h1>
         <form className="login-form" onSubmit={logIn}>
           <div className="login-input-div">
             <label htmlFor="email">Email Address</label>
@@ -206,17 +208,28 @@ const Login = () => {
           </div>
           <div className="login-input-div">
             <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => handlePasswordChange(e.target.value)}
-              onFocus={() => setError("")}
-              aria-required="true"
-              aria-invalid={!!passwordError}
-              aria-describedby={passwordError ? "password-error" : undefined}
-            />
+            <div className="login-password-wrapper">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => handlePasswordChange(e.target.value)}
+                onFocus={() => setError("")}
+                aria-required="true"
+                aria-invalid={!!passwordError}
+                aria-describedby={passwordError ? "password-error" : undefined}
+              />
+              <button
+                type="button"
+                className="login-toggle-password"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                tabIndex={0}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
             {passwordError && (
               <span
                 id="password-error"
@@ -260,11 +273,11 @@ const Login = () => {
             aria-label="Sign In"
             disabled={isLoading}
           >
-            {isLoading ? "Signing In..." : "Sign In"}
+            {isLoading ? "Logging in..." : "Log in"}
           </button>
         </form>
         <div className="login-divider">
-          <span>or Sign in with</span>
+          <span>or Log in with</span>
         </div>
         <button
           className="login-google-btn"

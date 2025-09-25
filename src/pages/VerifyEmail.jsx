@@ -57,7 +57,7 @@ const VerifyEmail = () => {
         <button
           className="verify-btn"
           onClick={handleSignIn}
-          aria-label="Go to Sign In"
+          aria-label="Go to Log in"
         >
           Sign In
         </button>

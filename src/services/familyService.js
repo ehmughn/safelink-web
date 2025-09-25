@@ -3,12 +3,10 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
   updateDoc,
   arrayUnion,
   arrayRemove,
-  query,
-  where,
-  getDocs,
   onSnapshot,
   serverTimestamp,
   Timestamp,
@@ -267,6 +265,43 @@ export class FamilyService {
       return { success: true };
     } catch (error) {
       console.error("Error leaving family:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  static async deleteAccount(user) {
+    try {
+      const userId = user.uid;
+      const userDocRef = doc(db, "users", userId);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const familyCode = userData.familyCode;
+
+        // Remove user from family members if in a family
+        if (familyCode) {
+          const familyRef = doc(db, "families", familyCode);
+          const familyDoc = await getDoc(familyRef);
+
+          if (familyDoc.exists()) {
+            const familyData = familyDoc.data();
+            const memberToRemove = familyData.members.find(
+              (member) => member.userId === userId
+            );
+            if (memberToRemove) {
+              await updateDoc(familyRef, {
+                members: arrayRemove(memberToRemove),
+              });
+            }
+          }
+        }
+        // Delete user document
+        await deleteDoc(userDocRef);
+      }
+      return { success: true };
+    } catch (error) {
+      console.error("Error deleting account:", error);
       return { success: false, error: error.message };
     }
   }
