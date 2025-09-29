@@ -47,6 +47,7 @@ const Account = () => {
     new: false,
     confirm: false,
   });
+  const [deleteError, setDeleteError] = useState(""); // New state for deletion error
 
   const [profileData, setProfileData] = useState({
     profile: {
@@ -235,6 +236,7 @@ const Account = () => {
     e.preventDefault();
     const errors = validateDeleteConfirmation(deleteConfirmation);
     setFormErrors((prev) => ({ ...prev, delete: errors }));
+    setDeleteError(""); // Clear previous error
 
     if (Object.keys(errors).length > 0) return;
 
@@ -252,9 +254,9 @@ const Account = () => {
       navigate("/login");
     } catch (error) {
       if (error.code === "auth/wrong-password") {
-        addNotification("Password is incorrect", "error");
+        setDeleteError("Password is incorrect");
       } else {
-        addNotification("Failed to delete account", "error");
+        setDeleteError("Failed to delete account");
       }
       console.error(error);
     } finally {
@@ -810,6 +812,7 @@ const Account = () => {
                     </p>
                   )}
                 </div>
+                {deleteError && <p className="error-text">{deleteError}</p>}
                 <div className="form-actions">
                   <button
                     type="submit"
@@ -824,6 +827,7 @@ const Account = () => {
                       setShowDeleteConfirm(false);
                       setDeleteConfirmation({ password: "", confirmText: "" });
                       setFormErrors((prev) => ({ ...prev, delete: {} }));
+                      setDeleteError(""); // Clear error on cancel
                     }}
                     className="button cancel-button"
                   >

@@ -35,6 +35,12 @@ const CreateAccount = () => {
 
   const validatePhoneNumber = (phone) => /^\+?[\d\s-]{10,}$/.test(phone);
 
+  const validatePasswordComplexity = (password) => {
+    return (
+      /[a-z]/.test(password) && /[A-Z]/.test(password) && /[0-9]/.test(password)
+    );
+  };
+
   const validateForm = () => {
     const errors = {};
     if (!firstName) errors.firstName = "First name is required.";
@@ -50,6 +56,9 @@ const CreateAccount = () => {
     if (!password) errors.password = "Password is required.";
     else if (password.length < 6)
       errors.password = "Password must be at least 6 characters.";
+    else if (!validatePasswordComplexity(password))
+      errors.password =
+        "Password must contain at least 1 lowercase letter, 1 uppercase letter, and 1 number.";
     if (!confirmPassword)
       errors.confirmPassword = "Please confirm your password.";
     else if (password !== confirmPassword)

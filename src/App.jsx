@@ -9,9 +9,11 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import Account from "./pages/Account";
 import { auth } from "./config/firebase";
+import "./styles/Account.css"; // Import Account.css for loading styles
 
 function App() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // New loading state
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
@@ -20,9 +22,21 @@ function App() {
       } else {
         setUser(null);
       }
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-content">
+          <div className="spinner"></div>
+          <p className="loading-text">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
