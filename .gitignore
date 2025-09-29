@@ -26,4 +26,3 @@ dist-ssr
 
 # config directory
 src/config
-src/config/*
