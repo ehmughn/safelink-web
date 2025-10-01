@@ -7,7 +7,6 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { setDoc, doc } from "firebase/firestore";
-import "../styles/CreateAccount.css";
 import BrandLogo from "../components/BrandLogo";
 import AlertIcon from "../assets/alert-icon.png";
 import { Eye, EyeOff } from "lucide-react";
@@ -223,409 +222,910 @@ const CreateAccount = () => {
   };
 
   return (
-    <div className="create-root">
-      <a href="#main-content" className="create-skip-link">
-        Skip to content
-      </a>
-      <header className="create-header">
-        <BrandLogo safe="#1A1A1A" link="#E63946" />
-        <p className="create-tagline">Your Family Safety Dashboard</p>
-      </header>
-      <main id="main-content" className="create-div">
-        <button
-          className="create-back-btn"
-          onClick={goBack}
-          aria-label="Back to Home"
-          disabled={isLoading}
-        >
-          ←
-        </button>
-        <h1 className="create-title">Create Account</h1>
-        <p className="create-desc">Join SafeLink to protect your family</p>
-        {successMessage && (
-          <div className="create-success" role="alert">
-            <span className="create-success-icon">✔</span>
-            {successMessage}
+    <>
+      {/* Custom CSS for maintaining original design and hover effects */}
+      <style>
+        {`
+          .create-root {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            display: flex;
+            flex-direction: column;
+          }
+          
+          .create-header {
+            padding: 1.5rem 0;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            text-align: center;
+          }
+          
+          .create-tagline {
+            color: #6c757d;
+            font-size: 0.875rem;
+            margin: 0.5rem 0 0 0;
+          }
+          
+          .create-div {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            position: relative;
+            flex: 1;
+          }
+          
+          .create-back-btn {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+          }
+          
+          .create-back-btn:hover:not(:disabled) {
+            background-color: #f8f9fa;
+            color: #FF5A1F;
+            transform: translateX(-2px);
+          }
+          
+          .create-back-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+          }
+          
+          .create-title {
+            text-align: center;
+            margin: 2rem 0 0.5rem 0;
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #1a1a1a;
+          }
+          
+          .create-desc {
+            text-align: center;
+            color: #6c757d;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+          }
+          
+          .create-success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+          }
+          
+          .create-success-icon {
+            background: #28a745;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            flex-shrink: 0;
+          }
+          
+          .create-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+          }
+          
+          .create-input-div {
+            display: flex;
+            flex-direction: column;
+          }
+          
+          .create-role-div {
+            grid-column: 1 / -1;
+          }
+          
+          .create-input-div label {
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+            font-size: 0.875rem;
+          }
+          
+          .create-input-div input,
+          .create-input-div select {
+            padding: 0.75rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background-color: #fafafa;
+            width: 100%;
+          }
+          
+          .create-input-div input:focus,
+          .create-input-div select:focus {
+            outline: none;
+            border-color: #FF5A1F;
+            background-color: white;
+            box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.1);
+          }
+          
+          .create-input-div input.is-invalid,
+          .create-input-div select.is-invalid {
+            border-color: #dc3545;
+            background-color: #fdf2f2;
+          }
+          
+          .create-password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+          }
+          
+          .create-toggle-password {
+            position: absolute;
+            right: 0.75rem;
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+          }
+          
+          .create-toggle-password:hover {
+            color: #FF5A1F;
+          }
+          
+          .create-input-error {
+            color: #dc3545;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+            display: block;
+          }
+          
+          .create-error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
+          
+          .create-error-icon {
+            flex-shrink: 0;
+          }
+          
+          /* Custom Bootstrap button styling */
+          .btn-safelink {
+            background: linear-gradient(135deg, #FF5A1F 0%, #E63946 100%);
+            border: 2px solid #FF5A1F;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+          }
+          
+          .btn-safelink:hover:not(:disabled) {
+            background: linear-gradient(135deg, #E63946 0%, #c82333 100%);
+            border-color: #E63946;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 90, 31, 0.3);
+          }
+          
+          .btn-safelink:focus {
+            background: linear-gradient(135deg, #E63946 0%, #c82333 100%);
+            border-color: #E63946;
+            color: white;
+            box-shadow: 0 0 0 0.25rem rgba(255, 90, 31, 0.25);
+          }
+          
+          .btn-safelink:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            background: linear-gradient(135deg, #FF5A1F 0%, #E63946 100%);
+          }
+          
+          .create-divider {
+            text-align: center;
+            margin: 1.5rem 0;
+            position: relative;
+            color: #6c757d;
+            font-size: 0.875rem;
+          }
+          
+          .create-divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e9ecef;
+            z-index: 1;
+          }
+          
+          .create-divider span {
+            background: white;
+            padding: 0 1rem;
+            position: relative;
+            z-index: 2;
+          }
+          
+          .create-google-btn {
+            width: 100%;
+            background: white;
+            border: 2px solid #e5e7eb;
+            color: #374151;
+            padding: 0.875rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+          }
+          
+          .create-google-btn:hover:not(:disabled) {
+            border-color: #d1d5db;
+            background-color: #f9fafb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          }
+          
+          .create-google-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+          }
+          
+          .create-google-icon {
+            flex-shrink: 0;
+          }
+          
+          .create-bottom {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.875rem;
+            margin-top: 1.5rem;
+          }
+          
+          .create-login-link {
+            color: #FF5A1F;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+          }
+          
+          .create-login-link:hover {
+            color: #E63946;
+            text-decoration: underline;
+          }
+          
+          .create-footer {
+            text-align: center;
+            padding: 2rem 0;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            margin-top: auto;
+          }
+          
+          .create-footer a {
+            color: #6c757d;
+            text-decoration: none;
+            margin: 0 1rem;
+            font-size: 0.875rem;
+            transition: color 0.3s ease;
+          }
+          
+          .create-footer a:hover {
+            color: #FF5A1F;
+            text-decoration: none;
+          }
+          
+          .create-skip-link {
+            position: absolute;
+            top: -40px;
+            left: 6px;
+            background: #FF5A1F;
+            color: white;
+            padding: 8px;
+            text-decoration: none;
+            border-radius: 4px;
+            z-index: 1000;
+            transition: top 0.3s ease;
+          }
+          
+          .create-skip-link:focus {
+            top: 6px;
+            color: white;
+            text-decoration: none;
+          }
+          
+          @media (max-width: 768px) {
+            .create-div {
+              margin: 1rem;
+              padding: 1.5rem;
+            }
+            
+            .create-form-grid {
+              grid-template-columns: 1fr;
+            }
+            
+            .create-title {
+              font-size: 1.5rem;
+            }
+          }
+          
+          @media (max-width: 576px) {
+            .create-div {
+              margin: 0.5rem;
+              padding: 1rem;
+            }
+            
+            .create-back-btn {
+              top: 0.5rem;
+              left: 0.5rem;
+            }
+            
+            .create-title {
+              margin-top: 2.5rem;
+            }
+          }
+        `}
+      </style>
+
+      <div className="create-root">
+        <a href="#main-content" className="create-skip-link">
+          Skip to content
+        </a>
+
+        <header className="create-header">
+          <div className="container text-center">
+            <BrandLogo safe="#1A1A1A" link="#FF5A1F" />
+            <p className="create-tagline">Your Family Safety Dashboard</p>
           </div>
-        )}
-        {!accountCreated && (
-          <>
-            <form className="create-form" onSubmit={createAccount}>
-              <div className="create-form-grid">
-                <div className="create-input-div">
-                  <label htmlFor="firstName">First Name</label>
-                  <input
-                    id="firstName"
-                    type="text"
-                    placeholder="Enter your first name"
-                    value={firstName}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "firstName",
-                        e.target.value,
-                        setFirstName
-                      )
-                    }
-                    onFocus={() => {
-                      setError("");
-                      setSuccessMessage("");
-                    }}
-                    aria-required="true"
-                    aria-invalid={!!fieldErrors.firstName}
-                    aria-describedby={
-                      fieldErrors.firstName ? "firstName-error" : undefined
-                    }
-                  />
-                  {fieldErrors.firstName && (
-                    <span
-                      id="firstName-error"
-                      className="create-input-error"
-                      role="alert"
-                    >
-                      {fieldErrors.firstName}
-                    </span>
-                  )}
-                </div>
-                <div className="create-input-div">
-                  <label htmlFor="lastName">Last Name</label>
-                  <input
-                    id="lastName"
-                    type="text"
-                    placeholder="Enter your last name"
-                    value={lastName}
-                    onChange={(e) =>
-                      handleInputChange("lastName", e.target.value, setLastName)
-                    }
-                    onFocus={() => {
-                      setError("");
-                      setSuccessMessage("");
-                    }}
-                    aria-required="true"
-                    aria-invalid={!!fieldErrors.lastName}
-                    aria-describedby={
-                      fieldErrors.lastName ? "lastName-error" : undefined
-                    }
-                  />
-                  {fieldErrors.lastName && (
-                    <span
-                      id="lastName-error"
-                      className="create-input-error"
-                      role="alert"
-                    >
-                      {fieldErrors.lastName}
-                    </span>
-                  )}
-                </div>
-                <div className="create-input-div">
-                  <label htmlFor="email">Email Address</label>
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) =>
-                      handleInputChange("email", e.target.value, setEmail)
-                    }
-                    onFocus={() => {
-                      setError("");
-                      setSuccessMessage("");
-                    }}
-                    aria-required="true"
-                    aria-invalid={!!fieldErrors.email}
-                    aria-describedby={
-                      fieldErrors.email ? "email-error" : undefined
-                    }
-                  />
-                  {fieldErrors.email && (
-                    <span
-                      id="email-error"
-                      className="create-input-error"
-                      role="alert"
-                    >
-                      {fieldErrors.email}
-                    </span>
-                  )}
-                </div>
-                <div className="create-input-div">
-                  <label htmlFor="phoneNumber">Phone Number</label>
-                  <input
-                    id="phoneNumber"
-                    type="tel"
-                    placeholder="Enter your phone number"
-                    value={phoneNumber}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "phoneNumber",
-                        e.target.value,
-                        setPhoneNumber
-                      )
-                    }
-                    onFocus={() => {
-                      setError("");
-                      setSuccessMessage("");
-                    }}
-                    aria-required="true"
-                    aria-invalid={!!fieldErrors.phoneNumber}
-                    aria-describedby={
-                      fieldErrors.phoneNumber ? "phoneNumber-error" : undefined
-                    }
-                  />
-                  {fieldErrors.phoneNumber && (
-                    <span
-                      id="phoneNumber-error"
-                      className="create-input-error"
-                      role="alert"
-                    >
-                      {fieldErrors.phoneNumber}
-                    </span>
-                  )}
-                </div>
-                <div className="create-input-div">
-                  <label htmlFor="address">Address</label>
-                  <input
-                    id="address"
-                    type="text"
-                    placeholder="Enter your address"
-                    value={address}
-                    onChange={(e) =>
-                      handleInputChange("address", e.target.value, setAddress)
-                    }
-                    onFocus={() => {
-                      setError("");
-                      setSuccessMessage("");
-                    }}
-                    aria-required="true"
-                    aria-invalid={!!fieldErrors.address}
-                    aria-describedby={
-                      fieldErrors.address ? "address-error" : undefined
-                    }
-                  />
-                  {fieldErrors.address && (
-                    <span
-                      id="address-error"
-                      className="create-input-error"
-                      role="alert"
-                    >
-                      {fieldErrors.address}
-                    </span>
-                  )}
-                </div>
-                <div className="create-input-div">
-                  <label htmlFor="birthdate">Birthdate</label>
-                  <input
-                    id="birthdate"
-                    type="date"
-                    placeholder="Enter your birthdate"
-                    value={birthdate}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "birthdate",
-                        e.target.value,
-                        setBirthdate
-                      )
-                    }
-                    onFocus={() => {
-                      setError("");
-                      setSuccessMessage("");
-                    }}
-                    aria-required="true"
-                    aria-invalid={!!fieldErrors.birthdate}
-                    aria-describedby={
-                      fieldErrors.birthdate ? "birthdate-error" : undefined
-                    }
-                  />
-                  {fieldErrors.birthdate && (
-                    <span
-                      id="birthdate-error"
-                      className="create-input-error"
-                      role="alert"
-                    >
-                      {fieldErrors.birthdate}
-                    </span>
-                  )}
-                </div>
-                <div className="create-input-div">
-                  <label htmlFor="password">Password</label>
-                  <div className="create-password-wrapper">
-                    <input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "password",
-                          e.target.value,
-                          setPassword
-                        )
-                      }
-                      onFocus={() => {
-                        setError("");
-                        setSuccessMessage("");
-                      }}
-                      aria-required="true"
-                      aria-invalid={!!fieldErrors.password}
-                      aria-describedby={
-                        fieldErrors.password ? "password-error" : undefined
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="create-toggle-password"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={
-                        showPassword ? "Hide password" : "Show password"
-                      }
-                    >
-                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-                  </div>
-                  {fieldErrors.password && (
-                    <span
-                      id="password-error"
-                      className="create-input-error"
-                      role="alert"
-                    >
-                      {fieldErrors.password}
-                    </span>
-                  )}
-                </div>
-                <div className="create-input-div">
-                  <label htmlFor="confirm-password">Confirm Password</label>
-                  <div className="create-password-wrapper">
-                    <input
-                      id="confirm-password"
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm your password"
-                      value={confirmPassword}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "confirmPassword",
-                          e.target.value,
-                          setConfirmPassword
-                        )
-                      }
-                      onFocus={() => {
-                        setError("");
-                        setSuccessMessage("");
-                      }}
-                      aria-required="true"
-                      aria-invalid={!!fieldErrors.confirmPassword}
-                      aria-describedby={
-                        fieldErrors.confirmPassword
-                          ? "confirm-password-error"
-                          : undefined
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="create-toggle-password"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      aria-label={
-                        showConfirmPassword
-                          ? "Hide confirm password"
-                          : "Show confirm password"
-                      }
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff size={20} />
-                      ) : (
-                        <Eye size={20} />
-                      )}
-                    </button>
-                  </div>
-                  {fieldErrors.confirmPassword && (
-                    <span
-                      id="confirm-password-error"
-                      className="create-input-error"
-                      role="alert"
-                    >
-                      {fieldErrors.confirmPassword}
-                    </span>
-                  )}
-                </div>
-                <div className="create-input-div create-role-div">
-                  <label htmlFor="role">Role</label>
-                  <select
-                    id="role"
-                    value={role}
-                    onChange={(e) =>
-                      handleInputChange("role", e.target.value, setRole)
-                    }
-                    onFocus={() => {
-                      setError("");
-                      setSuccessMessage("");
-                    }}
-                    aria-required="true"
-                  >
-                    <option value="family_member">Family Member</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-              </div>
-              {error && (
-                <div className="create-error" role="alert">
-                  <img
-                    src={AlertIcon}
-                    alt="Error icon"
-                    className="create-error-icon"
-                    width="16"
-                    height="16"
-                  />
-                  {error}
-                </div>
-              )}
+        </header>
+
+        <main
+          id="main-content"
+          className="flex-grow-1 d-flex align-items-center"
+        >
+          <div className="container">
+            <div className="create-div mx-auto">
               <button
-                className="create-btn"
-                type="submit"
-                aria-label="Create Account"
+                className="create-back-btn btn"
+                onClick={goBack}
+                aria-label="Back to Home"
                 disabled={isLoading}
               >
-                {isLoading ? "Creating Account..." : "Create Account"}
+                ←
               </button>
-            </form>
-            <div className="create-divider">
-              <span>or Create Account with</span>
+
+              <h1 className="create-title">Create Account</h1>
+              <p className="create-desc">
+                Join SafeLink to protect your family
+              </p>
+
+              {successMessage && (
+                <div className="create-success alert" role="alert">
+                  <span className="create-success-icon">✔</span>
+                  {successMessage}
+                </div>
+              )}
+
+              {!accountCreated && (
+                <>
+                  <form className="create-form" onSubmit={createAccount}>
+                    <div className="create-form-grid">
+                      <div className="create-input-div">
+                        <label htmlFor="firstName" className="form-label">
+                          First Name
+                        </label>
+                        <input
+                          id="firstName"
+                          type="text"
+                          className={`form-control ${
+                            fieldErrors.firstName ? "is-invalid" : ""
+                          }`}
+                          placeholder="Enter your first name"
+                          value={firstName}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "firstName",
+                              e.target.value,
+                              setFirstName
+                            )
+                          }
+                          onFocus={() => {
+                            setError("");
+                            setSuccessMessage("");
+                          }}
+                          aria-required="true"
+                          aria-invalid={!!fieldErrors.firstName}
+                          aria-describedby={
+                            fieldErrors.firstName
+                              ? "firstName-error"
+                              : undefined
+                          }
+                        />
+                        {fieldErrors.firstName && (
+                          <span
+                            id="firstName-error"
+                            className="create-input-error"
+                            role="alert"
+                          >
+                            {fieldErrors.firstName}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="create-input-div">
+                        <label htmlFor="lastName" className="form-label">
+                          Last Name
+                        </label>
+                        <input
+                          id="lastName"
+                          type="text"
+                          className={`form-control ${
+                            fieldErrors.lastName ? "is-invalid" : ""
+                          }`}
+                          placeholder="Enter your last name"
+                          value={lastName}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "lastName",
+                              e.target.value,
+                              setLastName
+                            )
+                          }
+                          onFocus={() => {
+                            setError("");
+                            setSuccessMessage("");
+                          }}
+                          aria-required="true"
+                          aria-invalid={!!fieldErrors.lastName}
+                          aria-describedby={
+                            fieldErrors.lastName ? "lastName-error" : undefined
+                          }
+                        />
+                        {fieldErrors.lastName && (
+                          <span
+                            id="lastName-error"
+                            className="create-input-error"
+                            role="alert"
+                          >
+                            {fieldErrors.lastName}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="create-input-div">
+                        <label htmlFor="email" className="form-label">
+                          Email Address
+                        </label>
+                        <input
+                          id="email"
+                          type="email"
+                          className={`form-control ${
+                            fieldErrors.email ? "is-invalid" : ""
+                          }`}
+                          placeholder="Enter your email"
+                          value={email}
+                          onChange={(e) =>
+                            handleInputChange("email", e.target.value, setEmail)
+                          }
+                          onFocus={() => {
+                            setError("");
+                            setSuccessMessage("");
+                          }}
+                          aria-required="true"
+                          aria-invalid={!!fieldErrors.email}
+                          aria-describedby={
+                            fieldErrors.email ? "email-error" : undefined
+                          }
+                        />
+                        {fieldErrors.email && (
+                          <span
+                            id="email-error"
+                            className="create-input-error"
+                            role="alert"
+                          >
+                            {fieldErrors.email}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="create-input-div">
+                        <label htmlFor="phoneNumber" className="form-label">
+                          Phone Number
+                        </label>
+                        <input
+                          id="phoneNumber"
+                          type="tel"
+                          className={`form-control ${
+                            fieldErrors.phoneNumber ? "is-invalid" : ""
+                          }`}
+                          placeholder="Enter your phone number"
+                          value={phoneNumber}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "phoneNumber",
+                              e.target.value,
+                              setPhoneNumber
+                            )
+                          }
+                          onFocus={() => {
+                            setError("");
+                            setSuccessMessage("");
+                          }}
+                          aria-required="true"
+                          aria-invalid={!!fieldErrors.phoneNumber}
+                          aria-describedby={
+                            fieldErrors.phoneNumber
+                              ? "phoneNumber-error"
+                              : undefined
+                          }
+                        />
+                        {fieldErrors.phoneNumber && (
+                          <span
+                            id="phoneNumber-error"
+                            className="create-input-error"
+                            role="alert"
+                          >
+                            {fieldErrors.phoneNumber}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="create-input-div">
+                        <label htmlFor="address" className="form-label">
+                          Address
+                        </label>
+                        <input
+                          id="address"
+                          type="text"
+                          className={`form-control ${
+                            fieldErrors.address ? "is-invalid" : ""
+                          }`}
+                          placeholder="Enter your address"
+                          value={address}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "address",
+                              e.target.value,
+                              setAddress
+                            )
+                          }
+                          onFocus={() => {
+                            setError("");
+                            setSuccessMessage("");
+                          }}
+                          aria-required="true"
+                          aria-invalid={!!fieldErrors.address}
+                          aria-describedby={
+                            fieldErrors.address ? "address-error" : undefined
+                          }
+                        />
+                        {fieldErrors.address && (
+                          <span
+                            id="address-error"
+                            className="create-input-error"
+                            role="alert"
+                          >
+                            {fieldErrors.address}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="create-input-div">
+                        <label htmlFor="birthdate" className="form-label">
+                          Birthdate
+                        </label>
+                        <input
+                          id="birthdate"
+                          type="date"
+                          className={`form-control ${
+                            fieldErrors.birthdate ? "is-invalid" : ""
+                          }`}
+                          placeholder="Enter your birthdate"
+                          value={birthdate}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "birthdate",
+                              e.target.value,
+                              setBirthdate
+                            )
+                          }
+                          onFocus={() => {
+                            setError("");
+                            setSuccessMessage("");
+                          }}
+                          aria-required="true"
+                          aria-invalid={!!fieldErrors.birthdate}
+                          aria-describedby={
+                            fieldErrors.birthdate
+                              ? "birthdate-error"
+                              : undefined
+                          }
+                        />
+                        {fieldErrors.birthdate && (
+                          <span
+                            id="birthdate-error"
+                            className="create-input-error"
+                            role="alert"
+                          >
+                            {fieldErrors.birthdate}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="create-input-div">
+                        <label htmlFor="password" className="form-label">
+                          Password
+                        </label>
+                        <div className="create-password-wrapper">
+                          <input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            className={`form-control ${
+                              fieldErrors.password ? "is-invalid" : ""
+                            }`}
+                            placeholder="Enter your password"
+                            value={password}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "password",
+                                e.target.value,
+                                setPassword
+                              )
+                            }
+                            onFocus={() => {
+                              setError("");
+                              setSuccessMessage("");
+                            }}
+                            aria-required="true"
+                            aria-invalid={!!fieldErrors.password}
+                            aria-describedby={
+                              fieldErrors.password
+                                ? "password-error"
+                                : undefined
+                            }
+                          />
+                          <button
+                            type="button"
+                            className="create-toggle-password btn"
+                            onClick={() => setShowPassword(!showPassword)}
+                            aria-label={
+                              showPassword ? "Hide password" : "Show password"
+                            }
+                          >
+                            {showPassword ? (
+                              <EyeOff size={20} />
+                            ) : (
+                              <Eye size={20} />
+                            )}
+                          </button>
+                        </div>
+                        {fieldErrors.password && (
+                          <span
+                            id="password-error"
+                            className="create-input-error"
+                            role="alert"
+                          >
+                            {fieldErrors.password}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="create-input-div">
+                        <label
+                          htmlFor="confirm-password"
+                          className="form-label"
+                        >
+                          Confirm Password
+                        </label>
+                        <div className="create-password-wrapper">
+                          <input
+                            id="confirm-password"
+                            type={showConfirmPassword ? "text" : "password"}
+                            className={`form-control ${
+                              fieldErrors.confirmPassword ? "is-invalid" : ""
+                            }`}
+                            placeholder="Confirm your password"
+                            value={confirmPassword}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "confirmPassword",
+                                e.target.value,
+                                setConfirmPassword
+                              )
+                            }
+                            onFocus={() => {
+                              setError("");
+                              setSuccessMessage("");
+                            }}
+                            aria-required="true"
+                            aria-invalid={!!fieldErrors.confirmPassword}
+                            aria-describedby={
+                              fieldErrors.confirmPassword
+                                ? "confirm-password-error"
+                                : undefined
+                            }
+                          />
+                          <button
+                            type="button"
+                            className="create-toggle-password btn"
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            aria-label={
+                              showConfirmPassword
+                                ? "Hide confirm password"
+                                : "Show confirm password"
+                            }
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff size={20} />
+                            ) : (
+                              <Eye size={20} />
+                            )}
+                          </button>
+                        </div>
+                        {fieldErrors.confirmPassword && (
+                          <span
+                            id="confirm-password-error"
+                            className="create-input-error"
+                            role="alert"
+                          >
+                            {fieldErrors.confirmPassword}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="create-input-div create-role-div">
+                        <label htmlFor="role" className="form-label">
+                          Role
+                        </label>
+                        <select
+                          id="role"
+                          className="form-select"
+                          value={role}
+                          onChange={(e) =>
+                            handleInputChange("role", e.target.value, setRole)
+                          }
+                          onFocus={() => {
+                            setError("");
+                            setSuccessMessage("");
+                          }}
+                          aria-required="true"
+                        >
+                          <option value="family_member">Family Member</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {error && (
+                      <div className="create-error alert" role="alert">
+                        <img
+                          src={AlertIcon}
+                          alt="Error icon"
+                          className="create-error-icon"
+                          width="16"
+                          height="16"
+                        />
+                        {error}
+                      </div>
+                    )}
+
+                    <button
+                      className="btn btn-safelink btn-lg w-100"
+                      type="submit"
+                      aria-label="Create Account"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <span
+                            className="spinner-border spinner-border-sm me-2"
+                            role="status"
+                            aria-hidden="true"
+                          ></span>
+                          Creating Account...
+                        </>
+                      ) : (
+                        "Create Account"
+                      )}
+                    </button>
+                  </form>
+
+                  <div className="create-divider">
+                    <span>or Create Account with</span>
+                  </div>
+
+                  <button
+                    className="create-google-btn btn"
+                    onClick={createAccountWithGoogle}
+                    aria-label="Sign up with Google"
+                    disabled={isLoading}
+                  >
+                    <img
+                      src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                      alt="Google logo"
+                      className="create-google-icon"
+                      width="24"
+                      height="24"
+                    />
+                    {isLoading ? "Loading..." : "Google Account"}
+                  </button>
+                </>
+              )}
+
+              <div className="create-bottom">
+                Already have an account?{" "}
+                <span
+                  className="create-login-link"
+                  onClick={logIn}
+                  onKeyDown={(e) => handleKeyDown(e, logIn)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Sign In"
+                >
+                  Log in
+                </span>
+              </div>
             </div>
-            <button
-              className="create-google-btn"
-              onClick={createAccountWithGoogle}
-              aria-label="Sign up with Google"
-              disabled={isLoading}
-            >
-              <img
-                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-                alt="Google logo"
-                className="create-google-icon"
-                width="24"
-                height="24"
-              />
-              {isLoading ? "Loading..." : "Google Account"}
-            </button>
-          </>
-        )}
-        <div className="create-bottom">
-          Already have an account?{" "}
-          <span
-            className="create-login-link"
-            onClick={logIn}
-            onKeyDown={(e) => handleKeyDown(e, logIn)}
-            role="button"
-            tabIndex={0}
-            aria-label="Sign In"
-          >
-            Log in
-          </span>
-        </div>
-      </main>
-      <footer className="create-footer">
-        <a href="/help">Need Help?</a>
-        <a href="/privacy">Privacy Policy</a>
-        <a href="/terms">Terms of Service</a>
-      </footer>
-    </div>
+          </div>
+        </main>
+
+        <footer className="create-footer">
+          <div className="container">
+            <a href="/help">Need Help?</a>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+          </div>
+        </footer>
+      </div>
+    </>
   );
 };
 
