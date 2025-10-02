@@ -1,130 +1,222 @@
-import BrandLogo from "../components/BrandLogo";
-import { auth } from "../config/firebase";
-import { useState, useRef } from "react";
-import { ChevronDown } from "lucide-react";
-import { signOut } from "firebase/auth";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/Header.css";
+import { signOut } from "firebase/auth";
+import { auth } from "../config/firebase";
+import BrandLogo from "./BrandLogo";
+import {
+  User,
+  LogOut,
+  Settings,
+  Shield,
+  Menu,
+  X,
+  Home,
+  Users,
+  UserCircle,
+} from "lucide-react";
 
-const Header = (props) => {
+const Header = ({ profileData }) => {
   const navigate = useNavigate();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  const [error, setError] = useState(null);
-  const [isNavOpen, setIsNavOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const dropdownRef = useRef(null);
-
-  const logOut = async () => {
-    setIsLoading(true);
-    setError(null);
+  const handleSignOut = async () => {
     try {
       await signOut(auth);
+      localStorage.removeItem("auth");
+      navigate("/login");
     } catch (error) {
-      setError("Failed to log out.");
-      console.error("Error logging out:", error);
-    } finally {
-      setIsLoading(false);
+      console.error("Sign out error:", error);
     }
   };
 
-  const toggleNav = () => {
-    setIsNavOpen(!isNavOpen);
+  const getDisplayName = () => {
+    if (profileData?.profile?.firstName && profileData?.profile?.lastName) {
+      return `${profileData.profile.firstName} ${profileData.profile.lastName}`;
+    }
+    return profileData?.email?.split("@")[0] || "User";
   };
 
-  const toggleDropdown = () => {
-    setIsDropdownOpen((prev) => !prev);
+  const getInitials = () => {
+    const name = getDisplayName();
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
+
   return (
-    <header className="home-header" role="banner">
-      <div className="home-header-left">
-        <BrandLogo safe="white" link="white" />
-        <span
-          className="home-language-toggle"
-          role="button"
-          tabIndex={0}
-          onClick={() => console.log("Toggle language")}
-          onKeyDown={(e) => e.key === "Enter" && console.log("Toggle language")}
-        >
-          EN | FIL
-        </span>
-      </div>
-      <button
-        className="home-nav-toggle"
-        onClick={toggleNav}
-        aria-label="Toggle navigation menu"
-        aria-expanded={isNavOpen}
-      >
-        ☰
-      </button>
-      <nav className={`home-nav ${isNavOpen ? "open" : ""}`} role="navigation">
-        <a href="../" aria-current="page">
-          Dashboard
-        </a>
-        <a href="/alerts" onClick={() => navigate("/alerts")}>
-          Alerts
-        </a>
-        <a href="/family" onClick={() => navigate("/family")}>
-          Family
-        </a>
-        <a href="#">Evacuation</a>
-        <a href="#">Go-Bag</a>
-      </nav>
-      <div className="home-avatar" ref={dropdownRef}>
+    <nav className="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
+      <div className="container">
+        {/* Brand */}
         <button
-          className="home-avatar-button"
-          onClick={toggleDropdown}
-          aria-label="Toggle user menu"
-          aria-expanded={isDropdownOpen}
+          className="navbar-brand btn btn-link p-0 border-0"
+          onClick={() => navigate("/")}
+          style={{ textDecoration: "none" }}
         >
-          {props.profileData
-            ? props.profileData.profile.firstName || "User"
-            : "User"}
-          <ChevronDown
-            size={16}
-            className={`home-dropdown-icon ${isDropdownOpen ? "open" : ""}`}
-          />
+          <BrandLogo safe="#1A1A1A" link="#FF5A1F" />
         </button>
-        {isDropdownOpen && (
-          <ul className="home-dropdown-menu">
-            <li>
+
+        {/* Mobile menu toggle */}
+        <button
+          className="navbar-toggler border-0"
+          type="button"
+          onClick={() => setShowMobileMenu(!showMobileMenu)}
+          aria-label="Toggle navigation"
+        >
+          {showMobileMenu ? <X size={24} /> : <Menu size={24} />}
+        </button>
+
+        {/* Navigation items */}
+        <div
+          className={`collapse navbar-collapse ${showMobileMenu ? "show" : ""}`}
+        >
+          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+            <li className="nav-item">
               <button
-                className="home-dropdown-item"
-                onClick={() => navigate("/account")}
+                className="nav-link btn btn-link border-0 d-flex align-items-center gap-2"
+                onClick={() => navigate("/")}
               >
-                Profile
+                <Home size={18} />
+                <span>Home</span>
               </button>
             </li>
-            <li>
+            <li className="nav-item">
               <button
-                className="home-dropdown-item"
-                onClick={() => console.log("Settings clicked")}
+                className="nav-link btn btn-link border-0 d-flex align-items-center gap-2"
+                onClick={() => navigate("/family")}
               >
-                Settings
-              </button>
-            </li>
-            <li>
-              <button
-                className="home-dropdown-item"
-                onClick={() => console.log("Notifications clicked")}
-              >
-                Notifications
-              </button>
-            </li>
-            <li>
-              <button
-                className="home-dropdown-item"
-                onClick={logOut}
-                disabled={isLoading}
-              >
-                {isLoading ? "Logging out..." : "Logout"}
+                <Users size={18} />
+                <span>Family</span>
               </button>
             </li>
           </ul>
-        )}
+
+          {/* User menu */}
+          <div className="navbar-nav">
+            <div className="nav-item dropdown">
+              <button
+                className="nav-link dropdown-toggle btn btn-link border-0 d-flex align-items-center gap-2"
+                onClick={() => setShowDropdown(!showDropdown)}
+                aria-expanded={showDropdown}
+              >
+                <div
+                  className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {getInitials()}
+                </div>
+                <span className="d-none d-md-inline">{getDisplayName()}</span>
+              </button>
+
+              <ul
+                className={`dropdown-menu dropdown-menu-end ${
+                  showDropdown ? "show" : ""
+                }`}
+              >
+                <li>
+                  <h6 className="dropdown-header d-flex align-items-center gap-2">
+                    <UserCircle size={16} />
+                    {getDisplayName()}
+                  </h6>
+                </li>
+                <li>
+                  <hr className="dropdown-divider" />
+                </li>
+                <li>
+                  <button
+                    className="dropdown-item d-flex align-items-center gap-2"
+                    onClick={() => {
+                      navigate("/account");
+                      setShowDropdown(false);
+                    }}
+                  >
+                    <Settings size={16} />
+                    Account Settings
+                  </button>
+                </li>
+                <li>
+                  <button
+                    className="dropdown-item d-flex align-items-center gap-2"
+                    onClick={() => {
+                      navigate("/");
+                      setShowDropdown(false);
+                    }}
+                  >
+                    <Shield size={16} />
+                    Safety Dashboard
+                  </button>
+                </li>
+                <li>
+                  <hr className="dropdown-divider" />
+                </li>
+                <li>
+                  <button
+                    className="dropdown-item text-danger d-flex align-items-center gap-2"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut size={16} />
+                    Sign Out
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
-    </header>
+
+      <style jsx>{`
+        .dropdown-menu {
+          min-width: 200px;
+          border: 0;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+          border-radius: 8px;
+        }
+
+        .dropdown-item {
+          padding: 0.75rem 1rem;
+          transition: background-color 0.3s ease;
+        }
+
+        .dropdown-item:hover {
+          background-color: #f8f9fa;
+        }
+
+        .nav-link {
+          padding: 0.5rem 1rem;
+          color: #6c757d;
+          text-decoration: none;
+          transition: color 0.3s ease;
+        }
+
+        .nav-link:hover {
+          color: #ff5a1f;
+        }
+
+        .navbar-toggler:focus {
+          box-shadow: none;
+        }
+
+        @media (max-width: 991.98px) {
+          .navbar-collapse {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            padding: 1rem;
+            z-index: 1000;
+          }
+        }
+      `}</style>
+    </nav>
   );
 };
 
