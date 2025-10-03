@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   Users,
   Shield,
-  AlertTriangle,
   Clock,
   MapPin,
   Phone,
@@ -81,24 +80,6 @@ const FamilyStatusCard = React.memo(
       }
     };
 
-    const getOverallStatusText = useMemo(() => {
-      const memberCount = familyMembers.length;
-      const overallStatus = getOverallStatus(familyMembers);
-
-      switch (overallStatus) {
-        case "safe":
-          return `All ${memberCount} members are safe`;
-        case "danger":
-          return "Emergency: Family member in danger";
-        case "warning":
-          return "Some members have not responded";
-        case "mixed":
-          return "Mixed status - check individual members";
-        default:
-          return "No family members";
-      }
-    }, [familyMembers]);
-
     const getProgressPercentage = useMemo(() => {
       const safeCount = familyMembers.filter(
         (m) => m.status?.toUpperCase() === "SAFE"
@@ -128,51 +109,29 @@ const FamilyStatusCard = React.memo(
 
     return (
       <div className="family-status-container">
-        {/* Status Summary Cards */}
-        <div className="row g-3 mb-4">
-          <div className="col-md-3 col-sm-6">
-            <div className="card border-0 bg-success bg-opacity-10 h-100">
-              <div className="card-body text-center">
-                <CheckCircle className="text-success mb-2" size={32} />
-                <h4 className="text-success mb-1">
-                  {getTotalMembersByStatus("SAFE")}
-                </h4>
-                <small className="text-success fw-semibold">Safe</small>
-              </div>
-            </div>
+        {/* Status Summary Cards - 2x2 grid */}
+        <div className="status-summary-grid mb-4">
+          <div className="status-card safe">
+            <CheckCircle className="icon" size={28} />
+            <div className="count">{getTotalMembersByStatus("SAFE")}</div>
+            <div className="label">Safe</div>
           </div>
-          <div className="col-md-3 col-sm-6">
-            <div className="card border-0 bg-warning bg-opacity-10 h-100">
-              <div className="card-body text-center">
-                <HelpCircle className="text-warning mb-2" size={32} />
-                <h4 className="text-warning mb-1">
-                  {getTotalMembersByStatus("NO RESPONSE")}
-                </h4>
-                <small className="text-warning fw-semibold">No Response</small>
-              </div>
+          <div className="status-card noresponse">
+            <HelpCircle className="icon" size={28} />
+            <div className="count">
+              {getTotalMembersByStatus("NO RESPONSE")}
             </div>
+            <div className="label">No Response</div>
           </div>
-          <div className="col-md-3 col-sm-6">
-            <div className="card border-0 bg-danger bg-opacity-10 h-100">
-              <div className="card-body text-center">
-                <XCircle className="text-danger mb-2" size={32} />
-                <h4 className="text-danger mb-1">
-                  {getTotalMembersByStatus("DANGER")}
-                </h4>
-                <small className="text-danger fw-semibold">In Danger</small>
-              </div>
-            </div>
+          <div className="status-card danger">
+            <XCircle className="icon" size={28} />
+            <div className="count">{getTotalMembersByStatus("DANGER")}</div>
+            <div className="label">In Danger</div>
           </div>
-          <div className="col-md-3 col-sm-6">
-            <div className="card border-0 bg-primary bg-opacity-10 h-100">
-              <div className="card-body text-center">
-                <Users className="text-primary mb-2" size={32} />
-                <h4 className="text-primary mb-1">{familyMembers.length}</h4>
-                <small className="text-primary fw-semibold">
-                  Total Members
-                </small>
-              </div>
-            </div>
+          <div className="status-card total">
+            <Users className="icon" size={28} />
+            <div className="count">{familyMembers.length}</div>
+            <div className="label">Total Members</div>
           </div>
         </div>
 
@@ -361,14 +320,68 @@ const FamilyStatusCard = React.memo(
         </div>
 
         <style jsx>{`
-          .bg-primary {
-            background-color: #ff5a1f !important;
+          .status-summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
           }
-
-          .text-primary {
-            color: #ff5a1f !important;
+          @media (max-width: 500px) {
+            .status-summary-grid {
+              gap: 0.5rem;
+            }
           }
-
+          .status-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            padding: 1.1rem 0.5rem 1.1rem 0.5rem;
+            min-width: 70px;
+            min-height: 100px;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            transition: box-shadow 0.2s;
+          }
+          .status-card .icon {
+            margin-bottom: 0.2rem;
+          }
+          .status-card .count {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.1rem;
+          }
+          .status-card .label {
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-align: center;
+            white-space: pre-line;
+          }
+          .status-card.safe {
+            border-left-color: #22c55e;
+            background: linear-gradient(90deg, #f0fdf4 60%, #fff 100%);
+            color: #22c55e;
+          }
+          .status-card.noresponse {
+            border-left-color: #f59e0b;
+            background: linear-gradient(90deg, #fefce8 60%, #fff 100%);
+            color: #f59e0b;
+          }
+          .status-card.danger {
+            border-left-color: #ef4444;
+            background: linear-gradient(90deg, #fef2f2 60%, #fff 100%);
+            color: #ef4444;
+          }
+          .status-card.total {
+            border-left-color: #ff5a1f;
+            background: linear-gradient(90deg, #fff7f3 60%, #fff 100%);
+            color: #ff5a1f;
+          }
           .btn-safelink {
             background: linear-gradient(135deg, #ff5a1f 0%, #e63946 100%);
             border: 2px solid #ff5a1f;
@@ -376,7 +389,6 @@ const FamilyStatusCard = React.memo(
             font-weight: 600;
             transition: all 0.3s ease;
           }
-
           .btn-safelink:hover:not(:disabled) {
             background: linear-gradient(135deg, #e63946 0%, #c82333 100%);
             border-color: #e63946;
@@ -384,15 +396,12 @@ const FamilyStatusCard = React.memo(
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(255, 90, 31, 0.3);
           }
-
           .list-group-item {
             transition: background-color 0.3s ease;
           }
-
           .list-group-item:hover {
             background-color: #f8f9fa;
           }
-
           .dropdown-menu {
             border: 0;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
