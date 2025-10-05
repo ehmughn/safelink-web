@@ -9,7 +9,8 @@ import {
   CheckCircle,
   AlertTriangle,
   X,
-  ChevronDown,
+  AlertCircle,
+  Package,
 } from "lucide-react";
 import { MapContainer, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -28,7 +29,7 @@ const Home = () => {
   const [familyCode, setFamilyCode] = useState(null);
   const [user, setUser] = useState(null);
   const [familyLoading, setFamilyLoading] = useState(true);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // Added missing state
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [profileData, setProfileData] = useState({
     profile: { firstName: "", lastName: "", address: "" },
     email: "",
@@ -87,7 +88,7 @@ const Home = () => {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []); // Fixed dependency array
+  }, []);
 
   const loadFamilyData = async (userId) => {
     setFamilyLoading(true);
@@ -199,530 +200,378 @@ const Home = () => {
     setAlerts((prev) => prev.filter((alert) => alert.id !== id));
   };
 
+  const getSeverityClass = (severity) => {
+    switch (severity) {
+      case "high":
+        return "alert-danger";
+      case "medium":
+        return "alert-warning";
+      case "low":
+        return "alert-success";
+      default:
+        return "alert-info";
+    }
+  };
+
   return (
     <>
       <style>
         {`
-          .home-container {
-            min-height: 100vh;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          .hover-lift {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           }
-          
-          .home-welcome-section {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            padding: 3rem 0;
-            text-align: center;
-            margin-bottom: 2rem;
+          .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15) !important;
           }
-          
-          .home-welcome-title {
-            color: #FF5A1F;
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin: 0;
+          .cursor-pointer {
+            cursor: pointer;
+          }
+          .letter-spacing-1 {
             letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
           }
-          
-          .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+          .form-check-input:checked {
+            background-color: #dc3545;
+            border-color: #dc3545;
           }
-          
-          .dashboard-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            border: none;
+          .sos-pulse {
+            animation: sosPulse 2s infinite;
           }
-          
-          .dashboard-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+          @keyframes sosPulse {
+            0%, 100% {
+              transform: scale(1);
+              box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.5);
+            }
+            50% {
+              transform: scale(1.05);
+              box-shadow: 0 0 0 15px rgba(220, 53, 69, 0);
+            }
           }
-          
-          .dashboard-card.clickable {
-            cursor: pointer;
-          }
-          
-          .section-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          
-          .alert-message {
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.75rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.875rem;
+          .action-btn-hover {
             transition: all 0.3s ease;
           }
-          
-          .alert-message.low {
-            background-color: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
-          }
-          
-          .alert-message.high {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-          }
-          
-          .alert-dismiss-btn {
-            background: none;
-            border: none;
-            color: inherit;
-            cursor: pointer;
-            padding: 0.25rem;
-            border-radius: 4px;
-            transition: background-color 0.3s ease;
-          }
-          
-          .alert-dismiss-btn:hover {
-            background-color: rgba(0, 0, 0, 0.1);
-          }
-          
-          .alert-actions {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1rem;
-            flex-wrap: wrap;
-          }
-          
-          .action-btn {
-            background: linear-gradient(135deg, #FF5A1F 0%, #E63946 100%);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-          }
-          
-          .action-btn:hover {
+          .action-btn-hover:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 90, 31, 0.3);
-            background: linear-gradient(135deg, #E63946 0%, #c82333 100%);
+            box-shadow: 0 0.25rem 1rem rgba(220, 53, 69, 0.3);
           }
-          
-          .action-btn-secondary {
-            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+          .border-start-4 {
+            border-left-width: 4px !important;
           }
-          
-          .action-btn-secondary:hover {
-            background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
-            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
-          }
-          
-          .loading-text {
-            color: #6c757d;
-            font-style: italic;
-            text-align: center;
-            padding: 1rem;
-          }
-          
-          .map-container {
-            height: 200px;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 2px solid #e9ecef;
-          }
-          
-          .checklist-form {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-          }
-          
-          .checklist-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.5rem;
-            border-radius: 6px;
-            transition: background-color 0.3s ease;
-            cursor: pointer;
-          }
-          
-          .checklist-item:hover {
-            background-color: #f8f9fa;
-          }
-          
-          .checklist-item input[type="checkbox"] {
-            width: 1.25rem;
-            height: 1.25rem;
-            accent-color: #FF5A1F;
-          }
-          
-          .checklist-label {
-            font-weight: 500;
-            color: #374151;
-            text-transform: capitalize;
-          }
-          
-          .latest-alerts-list, .announcements-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-          }
-          
-          .latest-alert-item, .announcement-item {
-            padding: 0.75rem;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            border-left: 4px solid #FF5A1F;
-            font-size: 0.875rem;
-            transition: background-color 0.3s ease;
-          }
-          
-          .latest-alert-item:hover, .announcement-item:hover {
-            background-color: #e9ecef;
-          }
-          
-          .alert-time, .announcement-time {
-            font-size: 0.75rem;
-            color: #6c757d;
-            font-weight: 400;
-          }
-          
-          .actions-section {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            margin-top: 2rem;
-          }
-          
-          .actions-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-          }
-          
-          .action-btn-large {
-            background: linear-gradient(135deg, #FF5A1F 0%, #E63946 100%);
-            color: white;
-            border: none;
-            padding: 1.25rem;
-            border-radius: 12px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-            text-align: center;
-            min-height: 100px;
-            justify-content: center;
-          }
-          
-          .action-btn-large:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(255, 90, 31, 0.3);
-            background: linear-gradient(135deg, #E63946 0%, #c82333 100%);
-          }
-          
-          .action-btn-sos {
-            background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
-          }
-          
-          .action-btn-sos:hover {
-            background: linear-gradient(135deg, #b02a37 0%, #8b1f2b 100%);
-            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
-          }
-          
-          .action-desc {
-            font-size: 1.1rem;
-            font-weight: 700;
-          }
-          
-          .error-alert {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: #f8d7da;
-            color: #721c24;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
-            border: 1px solid #f5c6cb;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            max-width: 350px;
-            z-index: 1000;
-            animation: slideIn 0.3s ease;
-          }
-          
-          @keyframes slideIn {
-            from {
-              transform: translateX(100%);
-              opacity: 0;
-            }
-            to {
-              transform: translateX(0);
-              opacity: 1;
-            }
-          }
-          
-          @media (max-width: 768px) {
-            .dashboard-grid {
-              grid-template-columns: 1fr;
-              gap: 1rem;
-            }
-            
-            .actions-grid {
-              grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .home-welcome-title {
-              font-size: 2rem;
-            }
-            
-            .actions-section {
-              margin: 1rem;
-            }
-          }
-          
-          @media (max-width: 576px) {
-            .actions-grid {
-              grid-template-columns: 1fr;
-            }
-            
-            .alert-actions {
-              flex-direction: column;
-            }
+          .leaflet-container {
+            z-index: 1;
           }
         `}
       </style>
 
-      <div className="home-container">
+      <div className="min-vh-100 bg-light">
         <Header profileData={profileData} />
 
+        {/* Hero Section */}
         <section
-          className="home-welcome-section"
-          aria-labelledby="welcome-heading"
+          className="text-center py-5 mb-4"
+          style={{
+            background: "linear-gradient(135deg, #FF5A1F 0%, #E63946 100%)",
+          }}
         >
           <div className="container">
-            <h1 id="welcome-heading" className="home-welcome-title">
-              DISASTER PREPAREDNESS
+            <h1 className="display-4 fw-bold text-white mb-0 text-uppercase letter-spacing-1">
+              Disaster Preparedness
             </h1>
           </div>
         </section>
 
-        <div className="container">
-          <div className="dashboard-grid" role="grid">
-            {/* Alerts Section */}
-            <section className="dashboard-card" aria-labelledby="alerts-title">
-              <h2 id="alerts-title" className="section-title">
-                ALERTS
-              </h2>
-              {alerts.length > 0 ? (
-                alerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    className={`alert-message ${alert.severity}`}
-                  >
-                    <span>{alert.text}</span>
+        <div className="container px-3 px-md-4 pb-5">
+          {/* Dashboard Grid */}
+          <div className="row g-4 mb-4">
+            {/* Alerts Card */}
+            <div className="col-12">
+              <div className="card border-0 shadow-sm h-100 hover-lift">
+                <div className="card-body p-4">
+                  <h2 className="card-title h5 text-uppercase fw-bold text-danger mb-3 d-flex align-items-center">
+                    <Bell size={20} className="me-2" />
+                    Alerts
+                  </h2>
+
+                  {alerts.length > 0 ? (
+                    <div className="mb-3">
+                      {alerts.map((alert) => (
+                        <div
+                          key={alert.id}
+                          className={`alert ${getSeverityClass(
+                            alert.severity
+                          )} d-flex justify-content-between align-items-center mb-2`}
+                          role="alert"
+                        >
+                          <span>{alert.text}</span>
+                          <button
+                            type="button"
+                            className="btn-close"
+                            onClick={() => dismissAlert(alert.id)}
+                            aria-label="Close"
+                          ></button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="alert alert-info mb-3" role="alert">
+                      <AlertCircle size={18} className="me-2" />
+                      No active alerts at this time.
+                    </div>
+                  )}
+
+                  <div className="d-flex gap-2 flex-wrap">
+                    <ImSafeButton
+                      onSafeUpdate={handleSafeUpdate}
+                      size="normal"
+                    />
                     <button
-                      className="alert-dismiss-btn"
-                      onClick={() => dismissAlert(alert.id)}
-                      aria-label="Dismiss alert"
+                      className="btn btn-outline-danger"
+                      onClick={() => navigate("/alerts")}
                     >
-                      <X size={16} />
+                      View All Alerts
                     </button>
                   </div>
-                ))
-              ) : (
-                <div className="alert-message low">
-                  No active alerts at this time.
                 </div>
-              )}
-              <div className="alert-actions">
-                <ImSafeButton onSafeUpdate={handleSafeUpdate} size="normal" />
-                <button
-                  className="action-btn action-btn-secondary"
-                  onClick={() => navigate("/alerts")}
-                  aria-label="View all alerts"
-                >
-                  View All Alerts
-                </button>
               </div>
-            </section>
-            {/* Family Status Section */}
-            <section
-              className="dashboard-card clickable"
-              aria-labelledby="family-title"
-              onClick={() => navigate("/family")}
-            >
-              <h2 id="family-title" className="section-title">
-                FAMILY STATUS
-              </h2>
-              {familyLoading ? (
-                <div className="loading-text">Loading family data...</div>
-              ) : (
-                <FamilyStatusCard
-                  familyMembers={familyMembers}
-                  onRequestCheckIn={handleFamilyCheckIn}
-                  isLoading={familyLoading}
-                  showCheckInButton={true}
-                />
-              )}
-            </section>
-            {/* Evacuation Center Section */}
-            <section
-              className="dashboard-card"
-              aria-labelledby="evacuation-title"
-            >
-              <h2 id="evacuation-title" className="section-title">
-                Nearest Evacuation Center
-              </h2>
-              <MapContainer
-                center={[14.5547, 121.0244]}
-                zoom={13}
-                className="map-container"
+            </div>
+
+            {/* Family Status Card */}
+            <div className="col-12 col-lg-6">
+              <div
+                className="card border-0 shadow-sm h-100 hover-lift cursor-pointer"
+                onClick={() => navigate("/family")}
+                role="button"
+                tabIndex={0}
+                onKeyPress={(e) => e.key === "Enter" && navigate("/family")}
               >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-              </MapContainer>
-            </section>
-            {/* Go-Bag Checklist Section */}
-            <section className="dashboard-card" aria-labelledby="gobag-title">
-              <h2 id="gobag-title" className="section-title">
-                Go-Bag Checklist
-              </h2>
-              <form className="checklist-form">
-                {["food", "water", "clothes", "flashlight"].map((item) => (
-                  <label key={item} className="checklist-item">
-                    <input
-                      type="checkbox"
-                      checked={checklist[item]}
-                      onChange={() => handleChecklistChange(item)}
+                <div className="card-body p-4">
+                  <h2 className="card-title h5 text-uppercase fw-bold text-danger mb-3 d-flex align-items-center">
+                    <Users size={20} className="me-2" />
+                    Family Status
+                  </h2>
+
+                  {familyLoading ? (
+                    <div className="text-center py-4">
+                      <div className="spinner-border text-danger" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                      <p className="text-muted mt-2 mb-0">
+                        Loading family data...
+                      </p>
+                    </div>
+                  ) : (
+                    <FamilyStatusCard
+                      familyMembers={familyMembers}
+                      onRequestCheckIn={handleFamilyCheckIn}
+                      isLoading={familyLoading}
+                      showCheckInButton={true}
                     />
-                    <span className="checklist-label">
-                      {item.charAt(0).toUpperCase() + item.slice(1)}
-                    </span>
-                  </label>
-                ))}
-                <button
-                  type="button"
-                  className="action-btn mt-3"
-                  onClick={handleSaveChecklist}
-                  aria-label="Save go-bag checklist"
-                >
-                  Save Checklist
-                </button>
-              </form>
-            </section>
-            {/* Latest Alerts Section */}
-            <section
-              className="dashboard-card"
-              aria-labelledby="latest-alerts-title"
-            >
-              <h2 id="latest-alerts-title" className="section-title">
-                Latest Alerts
-              </h2>
-              <div className="latest-alerts-list">
-                {alerts.map((alert) => (
-                  <div key={alert.id} className="latest-alert-item">
-                    {alert.text}{" "}
-                    <span className="alert-time">
-                      {alert.severity === "high"
-                        ? "1 hour ago"
-                        : "PAGASA-PHIVOLCS"}
-                    </span>
-                  </div>
-                ))}
-                {alerts.length === 0 && (
-                  <div className="latest-alert-item">
-                    No recent alerts{" "}
-                    <span className="alert-time">All clear</span>
-                  </div>
-                )}
-              </div>
-            </section>
-            {/* Official Announcements Section */}
-            <section
-              className="dashboard-card"
-              aria-labelledby="announcements-title"
-            >
-              <h2 id="announcements-title" className="section-title">
-                Official Announcements
-              </h2>
-              <div className="announcements-list">
-                <div className="announcement-item">
-                  Emergency shelters are now open{" "}
-                  <span className="announcement-time">1 hour ago</span>
+                  )}
                 </div>
               </div>
-            </section>
+            </div>
+
+            {/* Evacuation Center Card */}
+            <div className="col-12 col-lg-6">
+              <div className="card border-0 shadow-sm h-100 hover-lift">
+                <div className="card-body p-4">
+                  <h2 className="card-title h5 text-uppercase fw-bold text-danger mb-3 d-flex align-items-center">
+                    <MapPin size={20} className="me-2" />
+                    Nearest Evacuation Center
+                  </h2>
+
+                  <div
+                    className="rounded overflow-hidden border"
+                    style={{ height: "250px" }}
+                  >
+                    <MapContainer
+                      center={[14.5547, 121.0244]}
+                      zoom={13}
+                      style={{ height: "100%", width: "100%" }}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                    </MapContainer>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Go-Bag Checklist Card */}
+            <div className="col-12 col-md-6">
+              <div className="card border-0 shadow-sm h-100 hover-lift">
+                <div className="card-body p-4">
+                  <h2 className="card-title h5 text-uppercase fw-bold text-danger mb-3 d-flex align-items-center">
+                    <Package size={20} className="me-2" />
+                    Go-Bag Checklist
+                  </h2>
+
+                  <div className="list-group list-group-flush mb-3">
+                    {["food", "water", "clothes", "flashlight"].map((item) => (
+                      <label
+                        key={item}
+                        className="list-group-item list-group-item-action d-flex align-items-center gap-3 border-0 px-0 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          className="form-check-input m-0 flex-shrink-0"
+                          checked={checklist[item]}
+                          onChange={() => handleChecklistChange(item)}
+                          style={{ width: "1.25rem", height: "1.25rem" }}
+                        />
+                        <span className="fw-medium text-capitalize">
+                          {item}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-danger w-100"
+                    onClick={handleSaveChecklist}
+                  >
+                    <CheckCircle size={18} className="me-2" />
+                    Save Checklist
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Latest Alerts Card */}
+            <div className="col-12 col-md-6">
+              <div className="card border-0 shadow-sm h-100 hover-lift">
+                <div className="card-body p-4">
+                  <h2 className="card-title h5 text-uppercase fw-bold text-danger mb-3">
+                    Latest Alerts
+                  </h2>
+
+                  <div className="list-group list-group-flush">
+                    {alerts.length > 0 ? (
+                      alerts.map((alert) => (
+                        <div
+                          key={alert.id}
+                          className="list-group-item border-0 border-start border-danger border-start-4 px-3 py-2 mb-2 bg-light"
+                        >
+                          <div className="d-flex justify-content-between align-items-start">
+                            <span className="fw-medium">{alert.text}</span>
+                            <small className="text-muted ms-2 flex-shrink-0">
+                              {alert.severity === "high"
+                                ? "1 hour ago"
+                                : "PAGASA-PHIVOLCS"}
+                            </small>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="list-group-item border-0 border-start border-success border-start-4 px-3 py-2 bg-light">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <span className="fw-medium">No recent alerts</span>
+                          <small className="text-muted">All clear</small>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Official Announcements Card */}
+            <div className="col-12">
+              <div className="card border-0 shadow-sm hover-lift">
+                <div className="card-body p-4">
+                  <h2 className="card-title h5 text-uppercase fw-bold text-danger mb-3">
+                    Official Announcements
+                  </h2>
+
+                  <div className="list-group list-group-flush">
+                    <div className="list-group-item border-0 border-start border-primary border-start-4 px-3 py-2 bg-light">
+                      <div className="d-flex justify-content-between align-items-start">
+                        <span className="fw-medium">
+                          Emergency shelters are now open
+                        </span>
+                        <small className="text-muted ms-2">1 hour ago</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Action Buttons Section */}
-          <section className="actions-section" aria-label="Action buttons">
-            <div className="actions-grid">
-              <button
-                className="action-btn-large action-btn-sos"
-                aria-label="Send SOS Notification"
-                onClick={handleSOSAlert}
-              >
-                <span className="action-desc">SOS</span>
-                Notify All
-              </button>
-              <button
-                className="action-btn-large"
-                aria-label="Initiate Family Check-In"
-                onClick={handleFamilyCheckIn}
-              >
-                <Users size={24} color="white" />
-                Family Check-In
-              </button>
-              <button
-                className="action-btn-large"
-                aria-label="Find Current Location"
-              >
-                <MapPin size={24} color="white" />
-                Find Location
-              </button>
-              <button
-                className="action-btn-large"
-                aria-label="Edit Go-Bag Checklist"
-              >
-                <CheckCircle size={24} color="white" />
-                Edit Go-Bag
-              </button>
+          <section className="mb-4">
+            <div className="card border-0 shadow">
+              <div className="card-body p-4">
+                <div className="row g-3">
+                  <div className="col-12 col-sm-6 col-lg-3">
+                    <button
+                      className="btn btn-danger w-100 py-3 d-flex flex-column align-items-center justify-content-center gap-2 position-relative overflow-hidden sos-pulse action-btn-hover"
+                      onClick={handleSOSAlert}
+                      style={{ minHeight: "120px" }}
+                    >
+                      <span className="display-6 fw-bold">SOS</span>
+                      <span className="small">Notify All</span>
+                    </button>
+                  </div>
+
+                  <div className="col-12 col-sm-6 col-lg-3">
+                    <button
+                      className="btn btn-danger w-100 py-3 d-flex flex-column align-items-center justify-content-center gap-2 action-btn-hover"
+                      onClick={handleFamilyCheckIn}
+                      style={{ minHeight: "120px" }}
+                    >
+                      <Users size={32} />
+                      <span className="fw-semibold">Family Check-In</span>
+                    </button>
+                  </div>
+
+                  <div className="col-12 col-sm-6 col-lg-3">
+                    <button
+                      className="btn btn-danger w-100 py-3 d-flex flex-column align-items-center justify-content-center gap-2 action-btn-hover"
+                      style={{ minHeight: "120px" }}
+                    >
+                      <MapPin size={32} />
+                      <span className="fw-semibold">Find Location</span>
+                    </button>
+                  </div>
+
+                  <div className="col-12 col-sm-6 col-lg-3">
+                    <button
+                      className="btn btn-danger w-100 py-3 d-flex flex-column align-items-center justify-content-center gap-2 action-btn-hover"
+                      style={{ minHeight: "120px" }}
+                    >
+                      <CheckCircle size={32} />
+                      <span className="fw-semibold">Edit Go-Bag</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
         </div>
 
-        {/* Error Alert */}
+        {/* Error Toast */}
         {error && (
-          <div className="error-alert" role="alert">
-            <AlertTriangle size={20} />
-            <span>{error}</span>
+          <div
+            className="position-fixed bottom-0 end-0 p-3"
+            style={{ zIndex: 1050 }}
+          >
+            <div className="toast show" role="alert">
+              <div className="toast-header bg-danger text-white">
+                <AlertTriangle size={18} className="me-2" />
+                <strong className="me-auto">Error</strong>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setError(null)}
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div className="toast-body">{error}</div>
+            </div>
           </div>
         )}
       </div>
