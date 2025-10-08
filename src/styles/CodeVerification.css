@@ -160,9 +160,15 @@
 }
 
 @keyframes successPulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* Loading state */
@@ -171,8 +177,13 @@
 }
 
 @keyframes loadingPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* Responsive design */
@@ -181,17 +192,17 @@
     padding: 20px 16px;
     margin: 0 16px;
   }
-  
+
   .code-inputs {
     gap: 6px;
   }
-  
+
   .code-input {
     width: 40px;
     height: 48px;
     font-size: 18px;
   }
-  
+
   .code-title {
     font-size: 18px;
   }
@@ -202,13 +213,13 @@
   .code-input {
     border-width: 3px;
   }
-  
+
   .code-input:focus {
     border-width: 3px;
     outline: 2px solid #000;
     outline-offset: 2px;
   }
-  
+
   .verify-button {
     border: 2px solid #000;
   }
@@ -222,49 +233,5 @@
   .code-loading .code-input {
     animation: none;
     transition: none;
-  }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .code-verification {
-    background: #1f2937;
-    color: #f9fafb;
-  }
-  
-  .code-title {
-    color: #f9fafb;
-  }
-  
-  .code-input {
-    background: #374151;
-    color: #f9fafb;
-    border-color: #4b5563;
-  }
-  
-  .code-input:focus {
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
-  }
-  
-  .code-input.filled {
-    border-color: #34d399;
-    background: #064e3b;
-  }
-  
-  .toggle-visibility,
-  .clear-code {
-    background: #374151;
-    border-color: #4b5563;
-    color: #d1d5db;
-  }
-  
-  .toggle-visibility:hover,
-  .clear-code:hover:not(:disabled) {
-    background: #4b5563;
-  }
-  
-  .code-help {
-    color: #9ca3af;
   }
 }

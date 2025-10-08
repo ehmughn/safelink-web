@@ -58,11 +58,11 @@ const Login = () => {
 
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
-      if (!result.user.emailVerified) {
-        setError("Please verify your email before logging in.");
-        setIsLoading(false);
-        return;
-      }
+      // if (!result.user.emailVerified) {
+      //   setError("Please verify your email before logging in.");
+      //   setIsLoading(false);
+      //   return;
+      // }
       const authInfo = {
         userId: result.user.uid,
         name: result.user.displayName,
