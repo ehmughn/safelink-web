@@ -590,7 +590,7 @@ const Header = ({ profileData }) => {
                       onClick={handleSignOut}
                     >
                       <LogOut size={18} />
-                      <span>Sign Out</span>
+                      <span>Log Out</span>
                     </button>
                   </div>
                 </div>
@@ -714,7 +714,7 @@ const Header = ({ profileData }) => {
               onClick={handleSignOut}
             >
               <LogOut size={22} />
-              <span>Sign Out</span>
+              <span>Log Out</span>
             </button>
           </div>
         </div>

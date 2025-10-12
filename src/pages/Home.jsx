@@ -22,6 +22,8 @@ import {
   Package,
   Radio,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Clock,
 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
@@ -58,6 +60,7 @@ const Home = () => {
   const [familyMembers, setFamilyMembers] = useState([]);
   const [familyCode, setFamilyCode] = useState(null);
   const [user, setUser] = useState(null);
+  const [isGoBagExpanded, setIsGoBagExpanded] = useState(false);
   const [familyLoading, setFamilyLoading] = useState(true);
   const [profileData, setProfileData] = useState({
     profile: { firstName: "", lastName: "", address: "" },
@@ -1235,86 +1238,185 @@ const Home = () => {
 
             <div className="col-12 col-lg-6">
               <section id="checklist-section">
-                <div className="dashboard-card">
-                  <div className="card-header-custom">
-                    <h2 className="card-title-custom">
-                      <div className="icon-wrapper">
-                        <Package size={24} color="white" />
-                      </div>
-                      Emergency Go-Bag
-                    </h2>
-                  </div>
-                  <div className="card-body-custom">
-                    <div className="mb-4">
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <span style={{ fontWeight: 600, color: "#64748b" }}>
-                          Progress: {completedCount}/{checklistItems.length}
-                        </span>
-                        <span
-                          style={{
-                            fontWeight: 700,
-                            fontSize: "1.25rem",
-                            color: "#FF5A1F",
-                          }}
-                        >
-                          {Math.round(progressPercentage)}%
-                        </span>
-                      </div>
-                      <div className="progress-bar-custom">
-                        <div
-                          className="progress-fill"
-                          style={{ width: `${progressPercentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div>
-                      {checklistItems.map((item) => (
-                        <div
-                          key={item.key}
-                          className={`checklist-item ${
-                            checklist[item.key] ? "checked" : ""
-                          }`}
-                          onClick={() => handleChecklistChange(item.key)}
-                        >
-                          <div className="d-flex align-items-center gap-3">
-                            <div
-                              className={`custom-checkbox ${
-                                checklist[item.key] ? "checked" : ""
-                              }`}
-                            ></div>
-                            <span
-                              style={{
-                                fontWeight: 600,
-                                fontSize: "1.05rem",
-                                color: "#1a202c",
-                                flex: 1,
-                              }}
-                            >
-                              {item.label}
-                            </span>
-                          </div>
+                <div
+                  className="dashboard-card"
+                  style={{
+                    height: isGoBagExpanded ? "auto" : "545px",
+                    cursor: !isGoBagExpanded ? "pointer" : "default",
+                  }}
+                  onClick={() => !isGoBagExpanded && setIsGoBagExpanded(true)}
+                >
+                  <div
+                    className="card-header-custom"
+                    style={{ cursor: isGoBagExpanded ? "pointer" : "inherit" }}
+                    onClick={(e) => {
+                      if (isGoBagExpanded) {
+                        e.stopPropagation();
+                        setIsGoBagExpanded(false);
+                      }
+                    }}
+                  >
+                    <div className="d-flex justify-content-between align-items-center w-100">
+                      <h2 className="card-title-custom">
+                        <div className="icon-wrapper">
+                          <Package size={24} color="white" />
                         </div>
-                      ))}
+                        Emergency Go-Bag
+                      </h2>
+                      {isGoBagExpanded ? (
+                        <ChevronUp size={24} className="text-muted" />
+                      ) : (
+                        <ChevronDown size={24} className="text-muted" />
+                      )}
                     </div>
-                    <button
-                      className="action-button w-100 mt-4"
-                      onClick={handleClearChecklist}
-                      style={{
-                        minHeight: "auto",
-                        padding: "1rem",
-                        background:
-                          "linear-gradient(135deg, #64748b 0%, #475569 100%)",
-                      }}
-                    >
-                      <X size={20} className="me-2" />
-                      Clear Checklist
-                    </button>
                   </div>
+                  {isGoBagExpanded ? (
+                    <div className="card-body-custom">
+                      <div className="mb-4">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                          <span style={{ fontWeight: 600, color: "#64748b" }}>
+                            Progress: {completedCount}/{checklistItems.length}
+                          </span>
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              fontSize: "1.25rem",
+                              color: "#FF5A1F",
+                            }}
+                          >
+                            {Math.round(progressPercentage)}%
+                          </span>
+                        </div>
+                        <div className="progress-bar-custom">
+                          <div
+                            className="progress-fill"
+                            style={{ width: `${progressPercentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                      <div>
+                        {checklistItems.map((item) => (
+                          <div
+                            key={item.key}
+                            className={`checklist-item ${
+                              checklist[item.key] ? "checked" : ""
+                            }`}
+                            onClick={() => handleChecklistChange(item.key)}
+                          >
+                            <div className="d-flex align-items-center gap-3">
+                              <div
+                                className={`custom-checkbox ${
+                                  checklist[item.key] ? "checked" : ""
+                                }`}
+                              ></div>
+                              <span
+                                style={{
+                                  fontWeight: 600,
+                                  fontSize: "1.05rem",
+                                  color: "#1a202c",
+                                  flex: 1,
+                                }}
+                              >
+                                {item.label}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        className="action-button w-100 mt-4"
+                        onClick={handleClearChecklist}
+                        style={{
+                          minHeight: "auto",
+                          padding: "1rem",
+                          background:
+                            "linear-gradient(135deg, #64748b 0%, #475569 100%)",
+                        }}
+                      >
+                        <X size={20} className="me-2" />
+                        Clear Checklist
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className="card-body-custom d-flex flex-column"
+                      style={{ height: "calc(100% - 89px)" }}
+                    >
+                      <div className="d-flex align-items-center gap-3 mb-4">
+                        <Package size={48} className="text-muted" />
+                        <div>
+                          <h5
+                            style={{
+                              fontWeight: 700,
+                              fontSize: "1.75rem",
+                              background:
+                                "linear-gradient(135deg, #FF5A1F 0%, #E63946 100%)",
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                              marginBottom: "0.25rem",
+                            }}
+                          >
+                            {Math.round(progressPercentage)}% Complete
+                          </h5>
+                          <p
+                            className="text-muted mb-0"
+                            style={{ fontWeight: 500 }}
+                          >
+                            {completedCount} of {checklistItems.length} items
+                            packed
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mb-3">
+                        {/* Show first 3 items only */}
+                        {checklistItems.slice(0, 3).map((item) => (
+                          <div
+                            key={item.key}
+                            className="checklist-item"
+                            style={{
+                              opacity: 0.8,
+                              cursor: "default",
+                              pointerEvents: "none",
+                            }}
+                          >
+                            <div className="d-flex align-items-center gap-3">
+                              <div
+                                className={`custom-checkbox ${
+                                  checklist[item.key] ? "checked" : ""
+                                }`}
+                              ></div>
+                              <span
+                                style={{
+                                  fontWeight: 600,
+                                  fontSize: "1rem",
+                                  color: "#1a202c",
+                                }}
+                              >
+                                {item.label}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div
+                        className="text-center mt-auto mb-3"
+                        style={{
+                          color: "#FF5A1F",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Click to expand more items ({checklistItems.length - 3}{" "}
+                        remaining)
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
 
-            <div className="col-12 col-lg-6">
+            <div className="col-12">
               <div className="dashboard-card">
                 <div className="card-header-custom">
                   <h2 className="card-title-custom">
