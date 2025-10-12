@@ -1416,7 +1416,7 @@ const Home = () => {
               </section>
             </div>
 
-            <div className="col-12">
+            <div className={`col-12 ${!isVerifiedOfficial ? "col-lg-6" : ""}`}>
               <div className="dashboard-card">
                 <div className="card-header-custom">
                   <h2 className="card-title-custom">
