@@ -1,38 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, googleProvider, db } from "../config/firebase";
-import {
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
-  signInWithPopup,
-} from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { setDoc, doc } from "firebase/firestore";
 import BrandLogo from "../components/BrandLogo";
 import AlertIcon from "../assets/alert-icon.png";
 import { Eye, EyeOff } from "lucide-react";
 
 const CreateAccount = () => {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [address, setAddress] = useState("");
-  const [birthdate, setBirthdate] = useState("");
-  const [role, setRole] = useState("family_member");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [accountCreated, setAccountCreated] = useState(false);
   const navigate = useNavigate();
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-  const validatePhoneNumber = (phone) => /^\+?[\d\s-]{10,}$/.test(phone);
 
   const validatePasswordComplexity = (password) => {
     return (
@@ -42,16 +29,9 @@ const CreateAccount = () => {
 
   const validateForm = () => {
     const errors = {};
-    if (!firstName) errors.firstName = "First name is required.";
-    if (!lastName) errors.lastName = "Last name is required.";
     if (!email) errors.email = "Email is required.";
     else if (!validateEmail(email))
       errors.email = "Please enter a valid email address.";
-    if (!phoneNumber) errors.phoneNumber = "Phone number is required.";
-    else if (!validatePhoneNumber(phoneNumber))
-      errors.phoneNumber = "Please enter a valid phone number.";
-    if (!address) errors.address = "Address is required.";
-    if (!birthdate) errors.birthdate = "Birthdate is required.";
     if (!password) errors.password = "Password is required.";
     else if (password.length < 6)
       errors.password = "Password must be at least 6 characters.";
@@ -92,39 +72,40 @@ const CreateAccount = () => {
         password
       );
 
-      // Send email verification
-      await sendEmailVerification(result.user, {
-        url: window.location.origin + "/verify-email",
-        handleCodeInApp: true,
-      });
-
       const authInfo = {
         userId: result.user.uid,
         email: email,
-        phoneNumber: phoneNumber,
+        phoneNumber: "",
         createdAt: new Date().toLocaleString("en-US", {
           timeZone: "Asia/Manila",
         }),
-        displayName: firstName + " " + lastName,
+        displayName: "",
         profile: {
-          address: address,
-          birthdate: birthdate,
-          firstName: firstName,
-          lastName: lastName,
-          role: role,
+          administrativeLocation: {
+            region: "",
+            province: "",
+            municipality: "",
+            barangay: "",
+          },
+          birthdate: "",
+          firstName: "",
+          lastName: "",
+          isVerifiedOfficial: false,
+          isAdmin: false,
         },
         profilePhoto: "",
-        isAuth: false, // Set to false until email is verified
-        emailVerified: false,
+        isAuth: true,
+        emailVerified: true,
       };
-      localStorage.setItem("auth", JSON.stringify(authInfo));
+
       await setDoc(doc(db, "users", result.user.uid), authInfo);
 
       setSuccessMessage(
-        "A verification email has been sent to your email address. Please verify your email to continue."
+        "Account created successfully! Redirecting to complete your profile..."
       );
-      setAccountCreated(true);
-      setIsLoading(false);
+      setTimeout(() => {
+        navigate("/complete-profile");
+      }, 1500);
     } catch (error) {
       if (error.code === "auth/email-already-in-use") {
         setError("This email is already registered.");
@@ -157,22 +138,28 @@ const CreateAccount = () => {
       const authInfo = {
         userId: user.uid,
         email: user.email,
-        phoneNumber: user.phoneNumber || "",
+        phoneNumber: "",
         createdAt:
           user.metadata?.creationTime ||
           new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }),
+        displayName: user.displayName || "",
         profile: {
-          address: "",
+          administrativeLocation: {
+            region: "",
+            province: "",
+            municipality: "",
+            barangay: "",
+          },
           birthdate: "",
           firstName: firstName,
           lastName: lastName,
-          role: "family_member",
+          isVerifiedOfficial: false,
+          isAdmin: false,
         },
         profilePhoto: user.photoURL || "",
-        isAuth: user.emailVerified, // Set based on email verification status
-        emailVerified: user.emailVerified,
+        isAuth: true,
+        emailVerified: true,
       };
-      localStorage.setItem("auth", JSON.stringify(authInfo));
 
       try {
         const { doc, getDoc, setDoc } = await import("firebase/firestore");
@@ -186,14 +173,12 @@ const CreateAccount = () => {
         console.error("Firestore error:", firestoreError);
       }
 
-      if (user.emailVerified) {
-        setSuccessMessage("Account created successfully!");
-      } else {
-        setSuccessMessage(
-          "A verification email has been sent to your email address. Please verify your email to continue."
-        );
-      }
-      setAccountCreated(true);
+      setSuccessMessage(
+        "Account created successfully! Redirecting to complete your profile..."
+      );
+      setTimeout(() => {
+        navigate("/complete-profile");
+      }, 1500);
     } catch (error) {
       if (error.code === "auth/popup-closed-by-user") {
         setError("Google sign-up was cancelled.");
@@ -223,7 +208,6 @@ const CreateAccount = () => {
 
   return (
     <>
-      {/* Custom CSS for maintaining original design and hover effects */}
       <style>
         {`
           .create-root {
@@ -248,7 +232,7 @@ const CreateAccount = () => {
           }
           
           .create-div {
-            max-width: 600px;
+            max-width: 500px;
             margin: 2rem auto;
             padding: 2rem;
             background: white;
@@ -333,8 +317,8 @@ const CreateAccount = () => {
           }
           
           .create-form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            display: flex;
+            flex-direction: column;
             gap: 1.25rem;
             margin-bottom: 1.5rem;
           }
@@ -344,10 +328,6 @@ const CreateAccount = () => {
             flex-direction: column;
           }
           
-          .create-role-div {
-            grid-column: 1 / -1;
-          }
-          
           .create-input-div label {
             margin-bottom: 0.5rem;
             font-weight: 500;
@@ -355,8 +335,7 @@ const CreateAccount = () => {
             font-size: 0.875rem;
           }
           
-          .create-input-div input,
-          .create-input-div select {
+          .create-input-div input {
             padding: 0.75rem 1rem;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
@@ -366,16 +345,14 @@ const CreateAccount = () => {
             width: 100%;
           }
           
-          .create-input-div input:focus,
-          .create-input-div select:focus {
+          .create-input-div input:focus {
             outline: none;
             border-color: #FF5A1F;
             background-color: white;
             box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.1);
           }
           
-          .create-input-div input.is-invalid,
-          .create-input-div select.is-invalid {
+          .create-input-div input.is-invalid {
             border-color: #dc3545;
             background-color: #fdf2f2;
           }
@@ -428,7 +405,6 @@ const CreateAccount = () => {
             flex-shrink: 0;
           }
           
-          /* Custom Bootstrap button styling */
           .btn-safelink {
             background: linear-gradient(135deg, #FF5A1F 0%, #E63946 100%);
             border: 2px solid #FF5A1F;
@@ -586,10 +562,6 @@ const CreateAccount = () => {
               padding: 1.5rem;
             }
             
-            .create-form-grid {
-              grid-template-columns: 1fr;
-            }
-            
             .create-title {
               font-size: 1.5rem;
             }
@@ -652,92 +624,10 @@ const CreateAccount = () => {
                 </div>
               )}
 
-              {!accountCreated && (
+              {!successMessage && (
                 <>
                   <form className="create-form" onSubmit={createAccount}>
                     <div className="create-form-grid">
-                      <div className="create-input-div">
-                        <label htmlFor="firstName" className="form-label">
-                          First Name
-                        </label>
-                        <input
-                          id="firstName"
-                          type="text"
-                          className={`form-control ${
-                            fieldErrors.firstName ? "is-invalid" : ""
-                          }`}
-                          placeholder="Enter your first name"
-                          value={firstName}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "firstName",
-                              e.target.value,
-                              setFirstName
-                            )
-                          }
-                          onFocus={() => {
-                            setError("");
-                            setSuccessMessage("");
-                          }}
-                          aria-required="true"
-                          aria-invalid={!!fieldErrors.firstName}
-                          aria-describedby={
-                            fieldErrors.firstName
-                              ? "firstName-error"
-                              : undefined
-                          }
-                        />
-                        {fieldErrors.firstName && (
-                          <span
-                            id="firstName-error"
-                            className="create-input-error"
-                            role="alert"
-                          >
-                            {fieldErrors.firstName}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="create-input-div">
-                        <label htmlFor="lastName" className="form-label">
-                          Last Name
-                        </label>
-                        <input
-                          id="lastName"
-                          type="text"
-                          className={`form-control ${
-                            fieldErrors.lastName ? "is-invalid" : ""
-                          }`}
-                          placeholder="Enter your last name"
-                          value={lastName}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "lastName",
-                              e.target.value,
-                              setLastName
-                            )
-                          }
-                          onFocus={() => {
-                            setError("");
-                            setSuccessMessage("");
-                          }}
-                          aria-required="true"
-                          aria-invalid={!!fieldErrors.lastName}
-                          aria-describedby={
-                            fieldErrors.lastName ? "lastName-error" : undefined
-                          }
-                        />
-                        {fieldErrors.lastName && (
-                          <span
-                            id="lastName-error"
-                            className="create-input-error"
-                            role="alert"
-                          >
-                            {fieldErrors.lastName}
-                          </span>
-                        )}
-                      </div>
-
                       <div className="create-input-div">
                         <label htmlFor="email" className="form-label">
                           Email Address
@@ -770,130 +660,6 @@ const CreateAccount = () => {
                             role="alert"
                           >
                             {fieldErrors.email}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="create-input-div">
-                        <label htmlFor="phoneNumber" className="form-label">
-                          Phone Number
-                        </label>
-                        <input
-                          id="phoneNumber"
-                          type="tel"
-                          className={`form-control ${
-                            fieldErrors.phoneNumber ? "is-invalid" : ""
-                          }`}
-                          placeholder="Enter your phone number"
-                          value={phoneNumber}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "phoneNumber",
-                              e.target.value,
-                              setPhoneNumber
-                            )
-                          }
-                          onFocus={() => {
-                            setError("");
-                            setSuccessMessage("");
-                          }}
-                          aria-required="true"
-                          aria-invalid={!!fieldErrors.phoneNumber}
-                          aria-describedby={
-                            fieldErrors.phoneNumber
-                              ? "phoneNumber-error"
-                              : undefined
-                          }
-                        />
-                        {fieldErrors.phoneNumber && (
-                          <span
-                            id="phoneNumber-error"
-                            className="create-input-error"
-                            role="alert"
-                          >
-                            {fieldErrors.phoneNumber}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="create-input-div">
-                        <label htmlFor="address" className="form-label">
-                          Address
-                        </label>
-                        <input
-                          id="address"
-                          type="text"
-                          className={`form-control ${
-                            fieldErrors.address ? "is-invalid" : ""
-                          }`}
-                          placeholder="Enter your address"
-                          value={address}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "address",
-                              e.target.value,
-                              setAddress
-                            )
-                          }
-                          onFocus={() => {
-                            setError("");
-                            setSuccessMessage("");
-                          }}
-                          aria-required="true"
-                          aria-invalid={!!fieldErrors.address}
-                          aria-describedby={
-                            fieldErrors.address ? "address-error" : undefined
-                          }
-                        />
-                        {fieldErrors.address && (
-                          <span
-                            id="address-error"
-                            className="create-input-error"
-                            role="alert"
-                          >
-                            {fieldErrors.address}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="create-input-div">
-                        <label htmlFor="birthdate" className="form-label">
-                          Birthdate
-                        </label>
-                        <input
-                          id="birthdate"
-                          type="date"
-                          className={`form-control ${
-                            fieldErrors.birthdate ? "is-invalid" : ""
-                          }`}
-                          placeholder="Enter your birthdate"
-                          value={birthdate}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "birthdate",
-                              e.target.value,
-                              setBirthdate
-                            )
-                          }
-                          onFocus={() => {
-                            setError("");
-                            setSuccessMessage("");
-                          }}
-                          aria-required="true"
-                          aria-invalid={!!fieldErrors.birthdate}
-                          aria-describedby={
-                            fieldErrors.birthdate
-                              ? "birthdate-error"
-                              : undefined
-                          }
-                        />
-                        {fieldErrors.birthdate && (
-                          <span
-                            id="birthdate-error"
-                            className="create-input-error"
-                            role="alert"
-                          >
-                            {fieldErrors.birthdate}
                           </span>
                         )}
                       </div>
@@ -1019,28 +785,6 @@ const CreateAccount = () => {
                             {fieldErrors.confirmPassword}
                           </span>
                         )}
-                      </div>
-
-                      <div className="create-input-div create-role-div">
-                        <label htmlFor="role" className="form-label">
-                          Role
-                        </label>
-                        <select
-                          id="role"
-                          className="form-select"
-                          value={role}
-                          onChange={(e) =>
-                            handleInputChange("role", e.target.value, setRole)
-                          }
-                          onFocus={() => {
-                            setError("");
-                            setSuccessMessage("");
-                          }}
-                          aria-required="true"
-                        >
-                          <option value="family_member">Family Member</option>
-                          <option value="admin">Admin</option>
-                        </select>
                       </div>
                     </div>
 

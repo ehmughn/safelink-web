@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   deleteDoc,
   updateDoc,
@@ -51,16 +52,6 @@ export class FamilyService {
 
       await setDoc(doc(db, "families", familyCode), familyData);
 
-      // Update user document to reference family
-      await setDoc(
-        doc(db, "users", userId),
-        {
-          familyCode,
-          joinedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-
       return { success: true, familyCode };
     } catch (error) {
       console.error("Error creating family:", error);
@@ -106,16 +97,6 @@ export class FamilyService {
         members: arrayUnion(newMember),
       });
 
-      // Update user document to reference family
-      await setDoc(
-        doc(db, "users", userId),
-        {
-          familyCode,
-          joinedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-
       return { success: true, familyCode };
     } catch (error) {
       console.error("Error joining family:", error);
@@ -142,16 +123,41 @@ export class FamilyService {
   // Get user's family code
   static async getUserFamilyCode(userId) {
     try {
-      const userDoc = await getDoc(doc(db, "users", userId));
+      // Find the family this user belongs to by checking all families
+      const familiesRef = collection(db, "families");
+      const querySnapshot = await getDocs(familiesRef);
 
-      if (!userDoc.exists()) {
-        return { success: false, error: "User not found" };
+      let userFamilyCode = null;
+
+      querySnapshot.forEach((familyDoc) => {
+        const familyDocData = familyDoc.data();
+
+        // Skip archived families
+        if (familyDocData.isArchived) {
+          return;
+        }
+
+        // Check if user is a member of this family
+        const memberFound = familyDocData.members?.find(
+          (member) => member.userId === userId
+        );
+
+        if (memberFound) {
+          userFamilyCode =
+            familyDocData.code || familyDocData.familyCode || familyDoc.id;
+        }
+      });
+
+      if (userFamilyCode) {
+        return {
+          success: true,
+          familyCode: userFamilyCode,
+        };
       }
 
-      const userData = userDoc.data();
       return {
         success: true,
-        familyCode: userData.familyCode || null,
+        familyCode: null,
       };
     } catch (error) {
       console.error("Error fetching user family code:", error);
@@ -255,11 +261,6 @@ export class FamilyService {
       // Remove user from family members
       await updateDoc(familyRef, {
         members: arrayRemove(memberToRemove),
-      });
-
-      // Remove family reference from user document
-      await updateDoc(doc(db, "users", userId), {
-        familyCode: null,
       });
 
       return { success: true };
