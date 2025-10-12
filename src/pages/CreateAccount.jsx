@@ -91,12 +91,13 @@ const CreateAccount = () => {
           firstName: "",
           lastName: "",
           isVerifiedOfficial: false,
+          isAdmin: false,
         },
         profilePhoto: "",
         isAuth: true,
         emailVerified: true,
       };
-      localStorage.setItem("auth", JSON.stringify(authInfo));
+
       await setDoc(doc(db, "users", result.user.uid), authInfo);
 
       setSuccessMessage(
@@ -153,12 +154,12 @@ const CreateAccount = () => {
           firstName: firstName,
           lastName: lastName,
           isVerifiedOfficial: false,
+          isAdmin: false,
         },
         profilePhoto: user.photoURL || "",
         isAuth: true,
         emailVerified: true,
       };
-      localStorage.setItem("auth", JSON.stringify(authInfo));
 
       try {
         const { doc, getDoc, setDoc } = await import("firebase/firestore");
@@ -207,7 +208,6 @@ const CreateAccount = () => {
 
   return (
     <>
-      {/* Custom CSS for maintaining original design and hover effects */}
       <style>
         {`
           .create-root {
@@ -405,7 +405,6 @@ const CreateAccount = () => {
             flex-shrink: 0;
           }
           
-          /* Custom Bootstrap button styling */
           .btn-safelink {
             background: linear-gradient(135deg, #FF5A1F 0%, #E63946 100%);
             border: 2px solid #FF5A1F;

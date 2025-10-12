@@ -258,7 +258,7 @@ const CompleteProfile = () => {
         "Profile completed successfully! Redirecting to dashboard..."
       );
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate("/");
       }, 1500);
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -268,7 +268,7 @@ const CompleteProfile = () => {
   };
 
   const handleSkip = () => {
-    navigate("/dashboard");
+    navigate("/");
   };
 
   if (isLoadingProfile) {

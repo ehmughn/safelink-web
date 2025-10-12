@@ -528,16 +528,6 @@ const Header = ({ profileData }) => {
 
             {/* User Section */}
             <div className="user-section">
-              {/* Notifications */}
-              <button
-                className="notification-button"
-                aria-label="Notifications"
-                title="Notifications"
-              >
-                <Bell size={20} color="#64748b" />
-                <span className="notification-badge">3</span>
-              </button>
-
               {/* User Menu */}
               <div style={{ position: "relative" }} ref={dropdownRef}>
                 <button

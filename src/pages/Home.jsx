@@ -6,8 +6,12 @@ import {
   getDocs,
   getDoc,
   onSnapshot,
+  query,
+  where,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "../config/firebase";
+import DisasterAlertsService from "../services/DisasterAlertsService";
 import {
   Bell,
   Users,
@@ -74,6 +78,12 @@ const Home = () => {
   const [evacCenters, setEvacCenters] = useState([]);
   const [mapLoading, setMapLoading] = useState(true);
   const [mapInstance, setMapInstance] = useState(null);
+  const [isVerifiedOfficial, setIsVerifiedOfficial] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [barangayMembers, setBarangayMembers] = useState([]);
+  const [broadcasts, setBroadcasts] = useState([]);
+  const [disasterAlerts, setDisasterAlerts] = useState([]);
+  const [disasterAlertsLoading, setDisasterAlertsLoading] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
@@ -94,6 +104,31 @@ const Home = () => {
               phoneNumber:
                 userData.phoneNumber || firebaseUser.phoneNumber || "",
             });
+
+            // Check if user is admin or verified official
+            setIsAdmin(userData.profile?.isAdmin || false);
+
+            setIsVerifiedOfficial(
+              userData.profile?.isVerifiedOfficial || false
+            );
+
+            // If admin, redirect to admin dashboard
+            if (userData.profile?.isAdmin) {
+              navigate("/admin");
+              return;
+            }
+
+            // Setup broadcast listener for ALL users in the barangay
+            const userBarangay =
+              userData.profile?.administrativeLocation?.barangay;
+            if (userBarangay) {
+              await setupBroadcastListener(userBarangay);
+            }
+
+            // If verified official, also load barangay members
+            if (userData.profile?.isVerifiedOfficial) {
+              await loadBarangayMembers(firebaseUser.uid, userBarangay);
+            }
           }
         } catch (error) {
           setError("Failed to fetch user data.");
@@ -111,6 +146,128 @@ const Home = () => {
     });
     return () => unsubscribe();
   }, [navigate]);
+
+  const loadBarangayMembers = async (userId, userBarangay) => {
+    if (!userBarangay) return;
+
+    try {
+      const usersRef = collection(db, "users");
+      const usersSnapshot = await getDocs(usersRef);
+
+      const members = usersSnapshot.docs
+        .filter((doc) => {
+          const data = doc.data();
+          return (
+            data?.profile?.administrativeLocation?.barangay === userBarangay &&
+            doc.id !== userId
+          );
+        })
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .slice(0, 10); // Only get first 10 for homepage
+
+      setBarangayMembers(members);
+    } catch (error) {
+      console.error("Error loading barangay members:", error);
+    }
+  };
+
+  const setupBroadcastListener = useCallback(async (userBarangay) => {
+    if (!userBarangay) return;
+
+    try {
+      const broadcastsRef = collection(db, "broadcasts");
+      const q = query(
+        broadcastsRef,
+        where("barangay", "==", userBarangay),
+        where("status", "==", "active")
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const broadcastData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          severity: doc.data().emergencyType === "other" ? "medium" : "high",
+        }));
+        setBroadcasts(broadcastData);
+        // Merge broadcasts with alerts
+        setAlerts((prev) => [
+          ...prev.filter((alert) => !alert.isBroadcast),
+          ...broadcastData.map((broadcast) => ({
+            id: broadcast.id,
+            text: broadcast.alertType,
+            severity: broadcast.severity,
+            description: broadcast.description,
+            image: broadcast.imageUrl,
+            isBroadcast: true,
+            createdAt: broadcast.createdAt,
+          })),
+        ]);
+      });
+      return unsubscribe;
+    } catch (error) {
+      console.error("Error setting up broadcast listener:", error);
+      setError("Failed to load broadcasts");
+    }
+  }, []);
+
+  const loadDisasterAlerts = useCallback(
+    async (lat, lon) => {
+      if (!isVerifiedOfficial) return; // Only load for verified officials
+
+      setDisasterAlertsLoading(true);
+      try {
+        const allAlerts = await DisasterAlertsService.getAllDisasterAlerts(
+          lat,
+          lon
+        );
+
+        // Filter for critical, high, and moderate severity within 50km radius
+        const nearbyAlerts = DisasterAlertsService.filterAlertsByRadius(
+          allAlerts,
+          lat,
+          lon,
+          50
+        );
+
+        const relevantAlerts = nearbyAlerts.filter(
+          (alert) =>
+            alert.severity === "critical" ||
+            alert.severity === "high" ||
+            alert.severity === "moderate"
+        );
+
+        // Convert to alert format with blue color
+        const formattedDisasterAlerts = relevantAlerts.map((alert) => ({
+          id: `disaster_${alert.id}`,
+          text: alert.title,
+          severity: "warning", // Blue color in Bootstrap
+          description: alert.description,
+          location: alert.location,
+          source: alert.source,
+          advisory: alert.advisory,
+          magnitude: alert.magnitude,
+          depth: alert.depth,
+          isDiaster: true,
+          createdAt: new Date().toISOString(),
+        }));
+
+        setDisasterAlerts(formattedDisasterAlerts);
+
+        // Merge disaster alerts with existing alerts
+        setAlerts((prev) => {
+          const nonDisasterAlerts = prev.filter((alert) => !alert.isDiaster);
+          return [...nonDisasterAlerts, ...formattedDisasterAlerts];
+        });
+      } catch (error) {
+        console.error("Error loading disaster alerts:", error);
+      } finally {
+        setDisasterAlertsLoading(false);
+      }
+    },
+    [isVerifiedOfficial]
+  );
 
   const setupFamilyListener = useCallback(async (userId) => {
     if (!userId) {
@@ -271,42 +428,83 @@ const Home = () => {
         setUserLocation(userLoc);
       }
 
-      const allCenters = [
-        {
-          name: "Makati High School",
-          address: "Gen. Luna St, Makati, Metro Manila",
-          coordinates: { latitude: 14.5634, longitude: 121.0312 },
-          type: "School",
-        },
-        {
-          name: "Barangay Rizal Covered Court",
-          address: "Estrella St, Makati, Metro Manila",
-          coordinates: { latitude: 14.5578, longitude: 121.0156 },
-          type: "Covered Court",
-        },
-        {
-          name: "University of Makati Evacuation Center",
-          address: "J.P. Rizal Ext, Makati, Metro Manila",
-          coordinates: { latitude: 14.5611, longitude: 121.0573 },
-          type: "Evacuation Center",
-        },
-        {
-          name: "Bangkal Community Center",
-          address: "Magallanes St, Makati, Metro Manila",
-          coordinates: { latitude: 14.5412, longitude: 121.0115 },
-          type: "Community Center",
-        },
-      ];
+      // Fetch nearby evacuation centers, schools, and covered courts using Overpass API
+      const radius = 5000; // 5km radius
+      const overpassQuery = `
+        [out:json][timeout:25];
+        (
+          node["amenity"="school"](around:${radius},${userLoc.latitude},${userLoc.longitude});
+          way["amenity"="school"](around:${radius},${userLoc.latitude},${userLoc.longitude});
+          node["leisure"="sports_centre"](around:${radius},${userLoc.latitude},${userLoc.longitude});
+          way["leisure"="sports_centre"](around:${radius},${userLoc.latitude},${userLoc.longitude});
+          node["amenity"="community_centre"](around:${radius},${userLoc.latitude},${userLoc.longitude});
+          way["amenity"="community_centre"](around:${radius},${userLoc.latitude},${userLoc.longitude});
+          node["building"="civic"](around:${radius},${userLoc.latitude},${userLoc.longitude});
+          way["building"="civic"](around:${radius},${userLoc.latitude},${userLoc.longitude});
+          node["amenity"="shelter"](around:${radius},${userLoc.latitude},${userLoc.longitude});
+          way["amenity"="shelter"](around:${radius},${userLoc.latitude},${userLoc.longitude});
+        );
+        out center;
+      `;
 
-      const nearbyCenters = allCenters
-        .map((center) => ({
-          ...center,
-          distance: haversineDistance(userLoc, center.coordinates),
-        }))
-        .filter((center) => center.distance <= 2)
-        .sort((a, b) => a.distance - b.distance);
+      try {
+        const response = await fetch(
+          "https://overpass-api.de/api/interpreter",
+          {
+            method: "POST",
+            body: overpassQuery,
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          }
+        );
 
-      setEvacCenters(nearbyCenters);
+        if (response.ok) {
+          const data = await response.json();
+          const centers = data.elements
+            .map((element) => {
+              const lat = element.lat || element.center?.lat;
+              const lon = element.lon || element.center?.lon;
+
+              if (!lat || !lon) return null;
+
+              const coords = { latitude: lat, longitude: lon };
+              const distance = haversineDistance(userLoc, coords);
+
+              let type = "Evacuation Center";
+              if (element.tags?.amenity === "school") type = "School";
+              else if (element.tags?.leisure === "sports_centre")
+                type = "Covered Court";
+              else if (element.tags?.amenity === "community_centre")
+                type = "Community Center";
+              else if (element.tags?.building === "civic")
+                type = "Civic Building";
+              else if (element.tags?.amenity === "shelter") type = "Shelter";
+
+              return {
+                name:
+                  element.tags?.name ||
+                  `${type} (${distance.toFixed(1)}km away)`,
+                address:
+                  element.tags?.["addr:full"] ||
+                  element.tags?.["addr:street"] ||
+                  "Address not available",
+                coordinates: coords,
+                type: type,
+                distance: distance,
+              };
+            })
+            .filter((center) => center !== null && center.distance <= 5)
+            .sort((a, b) => a.distance - b.distance)
+            .slice(0, 10); // Limit to 10 nearest centers
+
+          setEvacCenters(centers);
+        } else {
+          console.error("Failed to fetch from Overpass API");
+          setEvacCenters([]);
+        }
+      } catch (apiError) {
+        console.error("Error fetching evacuation centers:", apiError);
+        setEvacCenters([]);
+      }
     } catch (error) {
       console.error("Error loading evacuation centers:", error);
       setError("Failed to load evacuation centers.");
@@ -328,7 +526,12 @@ const Home = () => {
       if (result.success) {
         setAlerts((prev) => [
           ...prev,
-          { id: Date.now(), text: "Safe status updated!", severity: "low" },
+          {
+            id: Date.now(),
+            text: "Safe status updated!",
+            severity: "low",
+            isBroadcast: false,
+          },
         ]);
       }
       return result;
@@ -352,7 +555,12 @@ const Home = () => {
       if (result.success) {
         setAlerts((prev) => [
           ...prev,
-          { id: Date.now(), text: "Family check-in sent!", severity: "low" },
+          {
+            id: Date.now(),
+            text: "Family check-in sent!",
+            severity: "low",
+            isBroadcast: false,
+          },
         ]);
       }
     } catch (error) {
@@ -376,7 +584,12 @@ const Home = () => {
       if (result.success) {
         setAlerts((prev) => [
           ...prev,
-          { id: Date.now(), text: "SOS alert sent!", severity: "high" },
+          {
+            id: Date.now(),
+            text: "SOS alert sent!",
+            severity: "high",
+            isBroadcast: false,
+          },
         ]);
       }
     } catch (error) {
@@ -392,7 +605,12 @@ const Home = () => {
   const handleSaveChecklist = () => {
     setAlerts((prev) => [
       ...prev,
-      { id: Date.now(), text: "Go-Bag checklist saved!", severity: "low" },
+      {
+        id: Date.now(),
+        text: "Go-Bag checklist saved!",
+        severity: "low",
+        isBroadcast: false,
+      },
     ]);
     console.log("Checklist saved:", checklist);
   };
@@ -792,22 +1010,185 @@ const Home = () => {
           }
 
           .alert-notification {
-            border-radius: 14px;
+            border-radius: 16px;
             border: none;
-            padding: 1.25rem;
+            padding: 1.5rem;
             margin-bottom: 1rem;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-            animation: slideInRight 0.4s ease-out;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            animation: slideInRight 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+          }
+
+          .alert-notification::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+            transition: width 0.3s ease;
+          }
+
+          .alert-notification:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+          }
+
+          .alert-notification:hover::before {
+            width: 8px;
+          }
+
+          .alert-notification.alert-danger {
+            background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+            border-left: 5px solid #dc2626;
+          }
+
+          .alert-notification.alert-danger::before {
+            background: #dc2626;
+          }
+
+          .alert-notification.alert-warning {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border-left: 5px solid #f59e0b;
+          }
+
+          .alert-notification.alert-warning::before {
+            background: #f59e0b;
+          }
+
+          .alert-notification.alert-success {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-left: 5px solid #22c55e;
+          }
+
+          .alert-notification.alert-success::before {
+            background: #22c55e;
+          }
+
+          .alert-notification.alert-info {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-left: 5px solid #3b82f6;
+          }
+
+          .alert-notification.alert-info::before {
+            background: #3b82f6;
+          }
+
+          .alert-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          }
+
+          .alert-danger .alert-icon-wrapper {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+          }
+
+          .alert-warning .alert-icon-wrapper {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          }
+
+          .alert-success .alert-icon-wrapper {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+          }
+
+          .alert-info .alert-icon-wrapper {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          }
+
+          .alert-content {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .alert-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+          }
+
+          .alert-description {
+            font-size: 0.95rem;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+          }
+
+          .alert-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: #94a3b8;
+          }
+
+          .alert-badge {
+            padding: 0.4rem 0.9rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .alert-danger .alert-badge {
+            background: rgba(220, 38, 38, 0.15);
+            color: #dc2626;
+          }
+
+          .alert-warning .alert-badge {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+          }
+
+          .alert-success .alert-badge {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+          }
+
+          .alert-info .alert-badge {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+          }
+
+          .alert-close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.05);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            flex-shrink: 0;
+          }
+
+          .alert-close-btn:hover {
+            background: rgba(0,0,0,0.1);
+            transform: rotate(90deg);
           }
 
           @keyframes slideInRight {
             from {
               opacity: 0;
-              transform: translateX(30px);
+              transform: translateX(50px) scale(0.95);
             }
             to {
               opacity: 1;
-              transform: translateX(0);
+              transform: translateX(0) scale(1);
             }
           }
 
@@ -868,6 +1249,12 @@ const Home = () => {
             align-items: center;
             justify-content: center;
             margin: 0 auto 1.5rem;
+          }
+
+          .broadcast-image {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 0.5rem;
           }
 
           @media (max-width: 768px) {
@@ -1013,27 +1400,84 @@ const Home = () => {
                           key={alert.id}
                           className={`alert-notification alert ${getSeverityClass(
                             alert.severity
-                          )} d-flex justify-content-between align-items-center`}
+                          )}`}
                         >
                           <div className="d-flex align-items-center gap-3">
-                            {alert.severity === "high" && (
-                              <AlertTriangle size={20} />
-                            )}
-                            {alert.severity === "medium" && (
-                              <AlertCircle size={20} />
-                            )}
-                            {alert.severity === "low" && (
-                              <CheckCircle size={20} />
-                            )}
-                            <span style={{ fontWeight: 600 }}>
-                              {alert.text}
-                            </span>
+                            <div className="alert-icon-wrapper">
+                              {alert.severity === "high" && (
+                                <AlertTriangle size={24} color="white" />
+                              )}
+                              {alert.severity === "medium" && (
+                                <AlertCircle size={24} color="white" />
+                              )}
+                              {alert.severity === "low" && (
+                                <CheckCircle size={24} color="white" />
+                              )}
+                              {alert.severity === "warning" && (
+                                <Bell size={24} color="white" />
+                              )}
+                            </div>
+
+                            <div className="alert-content">
+                              <div className="alert-title">{alert.text}</div>
+
+                              {alert.description && (
+                                <div className="alert-description">
+                                  {alert.description}
+                                </div>
+                              )}
+
+                              {alert.isBroadcast && alert.image && (
+                                <img
+                                  src={alert.image}
+                                  alt="Broadcast"
+                                  className="broadcast-image"
+                                  style={{
+                                    maxWidth: "100%",
+                                    borderRadius: "12px",
+                                    marginTop: "0.75rem",
+                                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                                  }}
+                                />
+                              )}
+
+                              <div className="alert-meta">
+                                <span className="alert-badge">
+                                  {alert.severity === "high"
+                                    ? "Critical"
+                                    : alert.severity === "medium"
+                                    ? "Warning"
+                                    : alert.severity === "low"
+                                    ? "Info"
+                                    : "Update"}
+                                </span>
+                                {alert.isBroadcast && (
+                                  <span className="d-flex align-items-center gap-1">
+                                    <Radio size={14} />
+                                    Broadcast
+                                  </span>
+                                )}
+                                {alert.isDiaster && (
+                                  <span className="d-flex align-items-center gap-1">
+                                    <AlertTriangle size={14} />
+                                    Disaster Alert
+                                  </span>
+                                )}
+                                <span className="d-flex align-items-center gap-1">
+                                  <Clock size={14} />
+                                  Just now
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              className="alert-close-btn"
+                              onClick={() => dismissAlert(alert.id)}
+                              aria-label="Dismiss alert"
+                            >
+                              <X size={18} />
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            className="btn-close"
-                            onClick={() => dismissAlert(alert.id)}
-                          ></button>
                         </div>
                       ))}
                     </div>
@@ -1172,6 +1616,128 @@ const Home = () => {
                 </div>
               </div>
             </div>
+
+            {/* Barangay Members Card - ONLY SHOW FOR VERIFIED OFFICIALS */}
+            {isVerifiedOfficial && (
+              <div className="col-12 col-lg-6">
+                <div className="dashboard-card">
+                  <div className="card-header-custom">
+                    <h2 className="card-title-custom">
+                      <div className="icon-wrapper">
+                        <Users size={24} color="white" />
+                      </div>
+                      Barangay Members
+                    </h2>
+                  </div>
+                  <div className="card-body-custom">
+                    {barangayMembers.length === 0 ? (
+                      <div className="empty-state">
+                        <div className="empty-state-icon">
+                          <Users size={40} className="text-muted" />
+                        </div>
+                        <h5 style={{ fontWeight: 600, color: "#64748b" }}>
+                          No Members Yet
+                        </h5>
+                        <p className="text-muted mb-0">
+                          Your barangay doesn't have any members yet
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        {barangayMembers.slice(0, 10).map((member, index) => (
+                          <div
+                            key={member.id || index}
+                            className="family-member-card"
+                            style={{ cursor: "default" }}
+                          >
+                            <div className="d-flex align-items-center gap-3">
+                              <div className="member-avatar">
+                                {member.profile?.firstName?.[0]?.toUpperCase() ||
+                                  "U"}
+                                {member.profile?.lastName?.[0]?.toUpperCase() ||
+                                  ""}
+                              </div>
+                              <div className="flex-grow-1">
+                                <h6
+                                  style={{
+                                    fontWeight: 700,
+                                    fontSize: "1.1rem",
+                                    marginBottom: "0.5rem",
+                                    color: "#1a202c",
+                                  }}
+                                >
+                                  {member.profile?.firstName || ""}{" "}
+                                  {member.profile?.lastName || "Unknown"}
+                                </h6>
+                                <div className="d-flex align-items-center gap-2">
+                                  <span
+                                    style={{
+                                      fontSize: "0.875rem",
+                                      color: "#64748b",
+                                    }}
+                                  >
+                                    {member.email || "No email"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          className="btn w-100 mt-3"
+                          onClick={() => navigate("/barangay-members")}
+                          style={{
+                            background:
+                              "linear-gradient(135deg, #f6f8fb 0%, #e2e8f0 100%)",
+                            border: "2px solid #e2e8f0",
+                            borderRadius: "12px",
+                            padding: "0.875rem",
+                            fontWeight: 600,
+                            color: "#64748b",
+                            transition: "all 0.3s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.borderColor = "#FF5A1F";
+                            e.target.style.color = "#FF5A1F";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.borderColor = "#e2e8f0";
+                            e.target.style.color = "#64748b";
+                          }}
+                        >
+                          View All Barangay Members
+                        </button>
+                        <button
+                          className="btn w-100 mt-2"
+                          onClick={() => navigate("/broadcast-disaster")}
+                          style={{
+                            background:
+                              "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)",
+                            border: "none",
+                            borderRadius: "12px",
+                            padding: "0.875rem",
+                            fontWeight: 600,
+                            color: "white",
+                            transition: "all 0.3s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.transform = "translateY(-2px)";
+                            e.target.style.boxShadow =
+                              "0 4px 12px rgba(220, 38, 38, 0.3)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.transform = "translateY(0)";
+                            e.target.style.boxShadow = "none";
+                          }}
+                        >
+                          Broadcast Disaster Alert
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Evacuation Centers Card */}
             <div className="col-12 col-lg-6">
@@ -1355,9 +1921,6 @@ const Home = () => {
                               checklist[item.key] ? "checked" : ""
                             }`}
                           ></div>
-                          <span style={{ fontSize: "1.5rem" }}>
-                            {item.icon}
-                          </span>
                           <span
                             style={{
                               fontWeight: 600,
@@ -1418,15 +1981,36 @@ const Home = () => {
                           }}
                         >
                           <div className="d-flex justify-content-between align-items-start">
-                            <span
-                              style={{
-                                fontWeight: 600,
-                                fontSize: "1rem",
-                                color: "#1a202c",
-                              }}
-                            >
-                              {alert.text}
-                            </span>
+                            <div>
+                              <span
+                                style={{
+                                  fontWeight: 600,
+                                  fontSize: "1rem",
+                                  color: "#1a202c",
+                                }}
+                              >
+                                {alert.text}
+                              </span>
+                              {alert.isBroadcast && (
+                                <>
+                                  <p
+                                    style={{
+                                      margin: "0.5rem 0",
+                                      color: "#64748b",
+                                    }}
+                                  >
+                                    {alert.description}
+                                  </p>
+                                  {alert.image && (
+                                    <img
+                                      src={alert.image}
+                                      alt="Broadcast"
+                                      className="broadcast-image"
+                                    />
+                                  )}
+                                </>
+                              )}
+                            </div>
                             <span
                               style={{
                                 fontSize: "0.85rem",
