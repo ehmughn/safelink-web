@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Bell,
   CheckCircle,
@@ -9,55 +9,38 @@ import {
   Radio,
   Clock,
   MapPin,
-  TrendingUp,
-  Activity,
 } from "lucide-react";
 import Header from "../components/Header";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../config/firebase";
-
-// Mock data for demonstration
-const mockAlerts = [
-  {
-    id: 1,
-    text: "Typhoon Warning: Strong winds expected in Metro Manila",
-    severity: "high",
-    timestamp: Date.now() - 1000 * 60 * 30,
-    source: "PAGASA",
-    category: "Weather",
-  },
-  {
-    id: 2,
-    text: "Flood Alert: Rising water levels in Pasig River",
-    severity: "medium",
-    timestamp: Date.now() - 1000 * 60 * 120,
-    source: "MMDA",
-    category: "Flood",
-  },
-  {
-    id: 3,
-    text: "All clear: Weather conditions improving",
-    severity: "low",
-    timestamp: Date.now() - 1000 * 60 * 180,
-    source: "Local Authority",
-    category: "Update",
-  },
-];
+import {
+  collection,
+  doc,
+  getDoc,
+  onSnapshot,
+  query,
+  where,
+} from "firebase/firestore";
+import { db } from "../config/firebase";
+import DisasterAlertsService from "../services/DisasterAlertsService";
+import { SafeStatusService } from "../services/safeStatusService";
 
 const Alerts = () => {
-  const [alerts, setAlerts] = useState(mockAlerts);
+  const [alerts, setAlerts] = useState([]);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [filterSeverity, setFilterSeverity] = useState("all");
   const [showSuccess, setShowSuccess] = useState(false);
-
-  const navigate = useNavigate();
-
+  const [user, setUser] = useState(null);
   const [profileData, setProfileData] = useState({
     profile: { firstName: "", lastName: "", address: "" },
     email: "",
     phoneNumber: "",
   });
+  const [isVerifiedOfficial, setIsVerifiedOfficial] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
@@ -78,38 +61,178 @@ const Alerts = () => {
               phoneNumber:
                 userData.phoneNumber || firebaseUser.phoneNumber || "",
             });
+
+            setIsVerifiedOfficial(
+              userData.profile?.isVerifiedOfficial || false
+            );
+
+            // Setup broadcast listener
+            const userBarangay =
+              userData.profile?.administrativeLocation?.barangay;
+            if (userBarangay) {
+              await setupBroadcastListener(userBarangay);
+            }
+
+            // Load user location and disaster alerts if verified official
+            if (userData.profile?.isVerifiedOfficial) {
+              await loadUserLocationAndDisasterAlerts();
+            }
           }
         } catch (error) {
           setError("Failed to fetch user data.");
           console.error("Error fetching user document:", error);
+        } finally {
+          setLoading(false);
         }
-        await setupFamilyListener(firebaseUser.uid);
-        await loadUserLocationAndEvacCenters();
       } else {
         setUser(null);
-        setFamilyCode(null);
-        setFamilyMembers([]);
-        setFamilyLoading(false);
         navigate("/login");
       }
     });
     return () => unsubscribe();
   }, [navigate]);
 
+  const setupBroadcastListener = useCallback(async (userBarangay) => {
+    if (!userBarangay) return;
+
+    try {
+      const broadcastsRef = collection(db, "broadcasts");
+      const q = query(
+        broadcastsRef,
+        where("barangay", "==", userBarangay),
+        where("status", "==", "active")
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const broadcastData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          severity: doc.data().emergencyType === "other" ? "medium" : "high",
+        }));
+
+        // Convert broadcasts to alert format
+        const broadcastAlerts = broadcastData.map((broadcast) => ({
+          id: broadcast.id,
+          text: broadcast.alertType,
+          severity: broadcast.severity,
+          description: broadcast.description,
+          image: broadcast.imageUrl,
+          isBroadcast: true,
+          createdAt: broadcast.createdAt,
+          timestamp: broadcast.createdAt?.toMillis
+            ? broadcast.createdAt.toMillis()
+            : Date.now(),
+          source: "Barangay Official",
+          category: broadcast.emergencyType || "Emergency",
+        }));
+
+        setAlerts((prev) => {
+          const nonBroadcastAlerts = prev.filter((alert) => !alert.isBroadcast);
+          return [...nonBroadcastAlerts, ...broadcastAlerts];
+        });
+      });
+      return unsubscribe;
+    } catch (error) {
+      console.error("Error setting up broadcast listener:", error);
+      setError("Failed to load broadcasts");
+    }
+  }, []);
+
+  const loadUserLocationAndDisasterAlerts = async () => {
+    try {
+      const locationResult = await SafeStatusService.getCurrentLocation();
+      let userLoc;
+      if (locationResult.success) {
+        userLoc = locationResult.location;
+        setUserLocation(userLoc);
+        await loadDisasterAlerts(userLoc.latitude, userLoc.longitude);
+      }
+    } catch (error) {
+      console.error("Error loading location and disaster alerts:", error);
+    }
+  };
+
+  const loadDisasterAlerts = async (lat, lon) => {
+    try {
+      const allAlerts = await DisasterAlertsService.getAllDisasterAlerts(
+        lat,
+        lon
+      );
+
+      // Filter for critical, high, and moderate severity within 50km radius
+      const nearbyAlerts = DisasterAlertsService.filterAlertsByRadius(
+        allAlerts,
+        lat,
+        lon,
+        50
+      );
+
+      const relevantAlerts = nearbyAlerts.filter(
+        (alert) =>
+          alert.severity === "critical" ||
+          alert.severity === "high" ||
+          alert.severity === "moderate"
+      );
+
+      // Convert to alert format
+      const formattedDisasterAlerts = relevantAlerts.map((alert) => ({
+        id: `disaster_${alert.id}`,
+        text: alert.title,
+        severity: "warning",
+        description: alert.description,
+        location: alert.location,
+        source: alert.source,
+        advisory: alert.advisory,
+        magnitude: alert.magnitude,
+        depth: alert.depth,
+        isDiaster: true,
+        timestamp: new Date().getTime(),
+        category: "Disaster Alert",
+      }));
+
+      setAlerts((prev) => {
+        const nonDisasterAlerts = prev.filter((alert) => !alert.isDiaster);
+        return [...nonDisasterAlerts, ...formattedDisasterAlerts];
+      });
+    } catch (error) {
+      console.error("Error loading disaster alerts:", error);
+    }
+  };
+
   const handleImSafe = async () => {
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+    if (!user) {
+      setError("User not authenticated");
+      return;
+    }
 
-    const newAlert = {
-      id: Date.now(),
-      text: "You marked yourself as safe!",
-      severity: "low",
-      timestamp: Date.now(),
-      source: "Self Check-in",
-      category: "Status",
-    };
+    try {
+      const result = await SafeStatusService.recordSafeStatus(
+        user.uid,
+        userLocation,
+        "Manual check-in from alerts page"
+      );
 
-    setAlerts((prev) => [newAlert, ...prev]);
+      if (result.success) {
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+
+        const newAlert = {
+          id: Date.now(),
+          text: "You marked yourself as safe!",
+          severity: "low",
+          timestamp: Date.now(),
+          source: "Self Check-in",
+          category: "Status",
+          isSelfCheckIn: true,
+        };
+
+        setAlerts((prev) => [newAlert, ...prev]);
+      } else {
+        setError("Failed to update safe status");
+      }
+    } catch (error) {
+      console.error("Error updating safe status:", error);
+      setError("Failed to update safe status");
+    }
   };
 
   const dismissAlert = (id) => {
@@ -124,6 +247,8 @@ const Alerts = () => {
         return <AlertCircle size={20} />;
       case "low":
         return <CheckCircle size={20} />;
+      case "warning":
+        return <Bell size={20} />;
       default:
         return <Bell size={20} />;
     }
@@ -137,6 +262,8 @@ const Alerts = () => {
         return { bg: "#fffbeb", border: "#f59e0b", text: "#92400e" };
       case "low":
         return { bg: "#f0fdf4", border: "#22c55e", text: "#166534" };
+      case "warning":
+        return { bg: "#eff6ff", border: "#3b82f6", text: "#1e40af" };
       default:
         return { bg: "#f8fafc", border: "#94a3b8", text: "#475569" };
     }
@@ -366,6 +493,13 @@ const Alerts = () => {
             line-height: 1.4;
           }
 
+          .alert-description {
+            font-size: 0.95rem;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+          }
+
           .alert-meta {
             display: flex;
             align-items: center;
@@ -390,6 +524,13 @@ const Alerts = () => {
             font-weight: 600;
             background: linear-gradient(135deg, #f6f8fb 0%, #e2e8f0 100%);
             color: #475569;
+          }
+
+          .broadcast-image {
+            max-width: 100%;
+            border-radius: 12px;
+            margin-top: 0.75rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
           }
 
           .btn-close-custom {
@@ -623,32 +764,6 @@ const Alerts = () => {
         </section>
 
         <div className="container py-5 px-4" style={{ maxWidth: "900px" }}>
-          {/* Quick Actions */}
-          <div className="dashboard-card mb-4 p-4">
-            <h3 className="h5 fw-bold mb-4 d-flex align-items-center gap-2">
-              <Shield size={24} style={{ color: "#FF5A1F" }} />
-              Quick Actions
-            </h3>
-            <div className="d-flex gap-3 flex-wrap">
-              <button className="action-button" onClick={handleImSafe}>
-                <CheckCircle size={24} />
-                I'm Safe
-              </button>
-              <button
-                className="action-button"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #f6f8fb 0%, #e2e8f0 100%)",
-                  color: "#475569",
-                  boxShadow: "none",
-                }}
-              >
-                <Radio size={24} />
-                Report Incident
-              </button>
-            </div>
-          </div>
-
           {/* Filter Chips */}
           <div className="filter-chips">
             <button
@@ -707,7 +822,7 @@ const Alerts = () => {
                       className="alert-card"
                       style={{ borderLeftColor: colors.border }}
                     >
-                      <div className="d-flex align-items-start gap-3">
+                      <div className="d-flex align-items-center gap-3">
                         <div
                           className="alert-icon-wrapper"
                           style={{
@@ -720,6 +835,21 @@ const Alerts = () => {
 
                         <div className="alert-content">
                           <div className="alert-title">{alert.text}</div>
+
+                          {alert.description && (
+                            <div className="alert-description">
+                              {alert.description}
+                            </div>
+                          )}
+
+                          {alert.isBroadcast && alert.image && (
+                            <img
+                              src={alert.image}
+                              alt="Broadcast"
+                              className="broadcast-image"
+                            />
+                          )}
+
                           <div className="alert-meta">
                             <div className="alert-meta-item">
                               <Clock size={16} />
@@ -732,6 +862,18 @@ const Alerts = () => {
                             <span className="alert-category-badge">
                               {alert.category}
                             </span>
+                            {alert.isBroadcast && (
+                              <div className="alert-meta-item">
+                                <Radio size={14} />
+                                Broadcast
+                              </div>
+                            )}
+                            {alert.isDiaster && (
+                              <div className="alert-meta-item">
+                                <AlertTriangle size={14} />
+                                Disaster Alert
+                              </div>
+                            )}
                           </div>
                         </div>
 

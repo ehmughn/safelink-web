@@ -22,6 +22,7 @@ import {
   Globe,
   ChevronRight,
 } from "lucide-react";
+import HeroDevices from "../assets/hero-devices.png";
 
 const LandingPage = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -681,6 +682,7 @@ const LandingPage = () => {
                       width: "500px",
                       height: "500px",
                       maxWidth: "100%",
+                      padding: "2rem",
                       margin: "0 auto",
                       background: "rgba(255,255,255,0.1)",
                       borderRadius: "40px",
@@ -692,7 +694,11 @@ const LandingPage = () => {
                       boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
                     }}
                   >
-                    <Smartphone size={200} strokeWidth={1} />
+                    <img
+                      src={HeroDevices}
+                      alt=""
+                      style={{ width: "100%", borderRadius: "20px" }}
+                    />
                   </div>
                 </div>
               </div>
