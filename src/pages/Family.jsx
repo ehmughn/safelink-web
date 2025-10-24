@@ -601,9 +601,9 @@ const Family = () => {
 
       const getStatusIcon = (status) => {
         switch (status) {
-          case "SAFE":
+          case "I'm Safe":
             return <CheckCircle size={20} />;
-          case "DANGER":
+          case "Needs Help":
             return <XCircle size={20} />;
           case "NO RESPONSE":
           case "Not Yet Responded":
@@ -615,9 +615,9 @@ const Family = () => {
 
       const getStatusColor = (status) => {
         switch (status) {
-          case "SAFE":
+          case "I'm Safe":
             return "#22c55e";
-          case "DANGER":
+          case "Needs Help":
             return "#ef4444";
           case "NO RESPONSE":
           case "Not Yet Responded":
@@ -660,7 +660,7 @@ const Family = () => {
 
       const getProgressPercentage = React.useMemo(() => {
         const safeCount = familyMembers.filter(
-          (m) => m.status?.toUpperCase() === "SAFE"
+          (m) => m.status === "I'm Safe"
         ).length;
         return familyMembers.length
           ? (safeCount / familyMembers.length) * 100
@@ -691,7 +691,7 @@ const Family = () => {
                 <CheckCircle size={32} />
               </div>
               <div className="status-stat-number">
-                {getTotalMembersByStatus("SAFE")}
+                {getTotalMembersByStatus("I'm Safe")}
               </div>
               <div className="status-stat-label">Safe</div>
             </div>
@@ -712,7 +712,8 @@ const Family = () => {
                 <XCircle size={32} />
               </div>
               <div className="status-stat-number">
-                {getTotalMembersByStatus("DANGER")}
+                {getTotalMembersByStatus("Needs Help") +
+                  getTotalMembersByStatus("DANGER")}
               </div>
               <div className="status-stat-label">In Danger</div>
             </div>
@@ -1800,7 +1801,7 @@ const Family = () => {
                 <div className="status-buttons">
                   <button
                     className="status-button safe"
-                    onClick={() => handleStatusUpdate("SAFE")}
+                    onClick={() => handleStatusUpdate("I'm Safe")}
                     disabled={isLoading}
                   >
                     <CheckCircle size={24} style={{ marginRight: "0.5rem" }} />
@@ -1808,7 +1809,7 @@ const Family = () => {
                   </button>
                   <button
                     className="status-button danger"
-                    onClick={() => handleStatusUpdate("DANGER")}
+                    onClick={() => handleStatusUpdate("Needs Help")}
                     disabled={isLoading}
                   >
                     <XCircle size={24} style={{ marginRight: "0.5rem" }} />

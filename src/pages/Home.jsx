@@ -515,9 +515,11 @@ const Home = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "SAFE":
+      case "I'm Safe":
         return <CheckCircle className="text-success" size={18} />;
       case "DANGER":
+        return <X className="text-danger" size={18} />;
+      case "Needs Help":
         return <X className="text-danger" size={18} />;
       case "NO RESPONSE":
         return <AlertCircle className="text-warning" size={18} />;
@@ -528,9 +530,11 @@ const Home = () => {
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case "SAFE":
+      case "I'm Safe":
         return "badge bg-success";
       case "DANGER":
+        return "badge bg-danger";
+      case "Needs Help":
         return "badge bg-danger";
       case "NO RESPONSE":
         return "badge bg-warning";
